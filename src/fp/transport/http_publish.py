@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import json
+import ssl
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from threading import Thread
 from typing import Any
 from uuid import uuid4
 
-from fp.federation import FPServerCard
+from fp.federation import FPServerCard, new_unsigned_server_card_fields
+from fp.security.auth import Authenticator, extract_bearer_token
+from fp.security.mtls import MTLSConfig, create_server_ssl_context
 from fp.transport.http_jsonrpc import JSONRPCDispatcher
 
 
@@ -26,7 +29,13 @@ class FPHTTPPublishedServer:
         well_known_path: str = "/.well-known/fp-server.json",
         capabilities: dict[str, Any] | None = None,
         metadata: dict[str, Any] | None = None,
+        card_ttl_seconds: int = 600,
+        authenticator: Authenticator | None = None,
+        ssl_context: ssl.SSLContext | None = None,
+        mtls: MTLSConfig | None = None,
     ) -> None:
+        if ssl_context is not None and mtls is not None:
+            raise ValueError("ssl_context and mtls are mutually exclusive")
         self._server = server
         self._publish_entity_id = publish_entity_id
         self._host = host
@@ -35,6 +44,10 @@ class FPHTTPPublishedServer:
         self._well_known_path = well_known_path
         self._capabilities = capabilities or {}
         self._metadata = metadata or {}
+        self._card_ttl_seconds = card_ttl_seconds
+        self._authenticator = authenticator
+        self._ssl_context = ssl_context
+        self._mtls = mtls
 
         self._httpd: ThreadingHTTPServer | None = None
         self._thread: Thread | None = None
@@ -85,6 +98,12 @@ class FPHTTPPublishedServer:
                     self.send_response(404)
                     self.end_headers()
                     return
+                if outer._authenticator is not None:
+                    credentials = extract_bearer_token(self.headers.get("Authorization"))
+                    principal = outer._authenticator.authenticate(credentials)
+                    if principal is None:
+                        self._write_json(401, {"error": "unauthorized"})
+                        return
                 content_length = int(self.headers.get("Content-Length", "0"))
                 raw = self.rfile.read(content_length)
                 try:
@@ -105,15 +124,28 @@ class FPHTTPPublishedServer:
                 return
 
         self._httpd = ThreadingHTTPServer((self._host, self._port), _Handler)
+        tls_context = self._ssl_context
+        if tls_context is None and self._mtls is not None:
+            tls_context = create_server_ssl_context(self._mtls)
+        if tls_context is not None:
+            self._httpd.socket = tls_context.wrap_socket(self._httpd.socket, server_side=True)
         host, actual_port = self._httpd.server_address
+        scheme = "https" if tls_context is not None else "http"
+        issued_at, expires_at, ttl_seconds = new_unsigned_server_card_fields(self._card_ttl_seconds)
         self._card = FPServerCard(
             card_id=f"card-{uuid4().hex}",
             entity_id=self._publish_entity_id,
             fp_version=self._server.fp_version,
-            rpc_url=f"http://{host}:{actual_port}{self._rpc_path}",
-            well_known_url=f"http://{host}:{actual_port}{self._well_known_path}",
+            rpc_url=f"{scheme}://{host}:{actual_port}{self._rpc_path}",
+            well_known_url=f"{scheme}://{host}:{actual_port}{self._well_known_path}",
             capabilities=dict(self._capabilities),
             metadata=dict(self._metadata),
+            sign_alg="none",
+            key_ref=f"{self._publish_entity_id}#local",
+            signature="unsigned",
+            issued_at=issued_at,
+            expires_at=expires_at,
+            ttl_seconds=ttl_seconds,
         )
         self._thread = Thread(target=self._httpd.serve_forever, daemon=True)
         self._thread.start()

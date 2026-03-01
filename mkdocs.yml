@@ -40,6 +40,7 @@ extra_javascript:
 strict: true
 nav:
   - Home: index.md
+  - Comic Guide: comic-guide.md
   - Getting Started: getting-started.md
   - Architecture: architecture.md
   - Production Hardening: production-hardening.md

@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://foundationprotocol.org/spec/fp-directory.schema.json",
+  "title": "FP Directory Card",
+  "type": "object",
+  "required": [
+    "card_id",
+    "entity_id",
+    "fp_version",
+    "rpc_url",
+    "well_known_url"
+  ],
+  "properties": {
+    "card_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "entity_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "fp_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "rpc_url": {
+      "type": "string",
+      "format": "uri"
+    },
+    "well_known_url": {
+      "type": "string",
+      "format": "uri"
+    },
+    "capabilities": {
+      "type": "object",
+      "default": {}
+    },
+    "metadata": {
+      "type": "object",
+      "default": {}
+    },
+    "sign_alg": {
+      "type": "string"
+    },
+    "key_ref": {
+      "type": "string"
+    },
+    "signature": {
+      "type": "string"
+    },
+    "issued_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "ttl_seconds": {
+      "type": "integer",
+      "minimum": 1
+    }
+  },
+  "additionalProperties": false
+}

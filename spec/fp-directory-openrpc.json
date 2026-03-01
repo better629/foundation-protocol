@@ -1,0 +1,95 @@
+{
+  "openrpc": "1.2.6",
+  "info": {
+    "title": "Foundation Protocol Directory API",
+    "version": "0.1.0"
+  },
+  "methods": [
+    {
+      "name": "fp/directory.publish",
+      "summary": "Publish or update a signed server card",
+      "params": [
+        {
+          "name": "card",
+          "schema": {
+            "$ref": "fp-directory.schema.json"
+          }
+        }
+      ],
+      "result": {
+        "name": "card",
+        "schema": {
+          "$ref": "fp-directory.schema.json"
+        }
+      }
+    },
+    {
+      "name": "fp/directory.resolve",
+      "summary": "Resolve a server card by entity id",
+      "params": [
+        {
+          "name": "entity_id",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "result": {
+        "name": "card",
+        "schema": {
+          "$ref": "fp-directory.schema.json"
+        }
+      }
+    },
+    {
+      "name": "fp/directory.list",
+      "summary": "List discoverable server cards",
+      "params": [],
+      "result": {
+        "name": "cards",
+        "schema": {
+          "type": "array",
+          "items": {
+            "$ref": "fp-directory.schema.json"
+          }
+        }
+      }
+    },
+    {
+      "name": "fp/directory.heartbeat",
+      "summary": "Refresh card TTL",
+      "params": [
+        {
+          "name": "entity_id",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "result": {
+        "name": "card",
+        "schema": {
+          "$ref": "fp-directory.schema.json"
+        }
+      }
+    },
+    {
+      "name": "fp/directory.health",
+      "summary": "Update or query health state",
+      "params": [
+        {
+          "name": "entity_id",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "result": {
+        "name": "health",
+        "schema": {
+          "type": "object"
+        }
+      }
+    }
+  ]
+}

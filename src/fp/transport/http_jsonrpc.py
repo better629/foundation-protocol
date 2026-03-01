@@ -307,6 +307,7 @@ class JSONRPCDispatcher:
             "fp/initialize": lambda p: server.initialize(**p),
             "fp/initialized": lambda p: {"ok": True},
             "fp/ping": lambda p: {"ok": True, "fp_version": server.fp_version},
+            "fp/entities.register": lambda p: server.register_entity(_parse_entity(p["entity"])),
             "fp/entities.get": lambda p: server.get_entity(p["entity_id"]),
             "fp/entities.search": lambda p: server.search_entities(
                 query=p.get("query", ""),
@@ -387,6 +388,10 @@ class JSONRPCDispatcher:
                 session_id=p["session_id"],
                 activity_id=p.get("activity_id"),
                 from_event_id=p.get("from_event_id"),
+            ),
+            "fp/events.read": lambda p: server.events_read(
+                stream_id=p["stream_id"],
+                limit=int(p.get("limit", 200)),
             ),
             "fp/events.resubscribe": lambda p: server.events_resubscribe(
                 stream_id=p["stream_id"],

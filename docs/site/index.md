@@ -14,6 +14,14 @@ FP helps you run AI systems that are:
 - **auditable** (not log-forensics-only)
 - **economically accountable** (not opaque cost centers)
 
+## New: FP Comic Guide
+
+Prefer a visual explanation first? Start here:
+
+- [FP Comic Guide](comic-guide.md)
+
+It explains FP with scene-by-scene narrative: discovery, collaboration, governance, settlement, and token-efficient execution.
+
 ## Is FP right for your system?
 
 Use FP if at least two are true:

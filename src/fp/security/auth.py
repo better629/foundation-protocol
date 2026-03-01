@@ -29,3 +29,16 @@ class StaticTokenAuthenticator:
         if principal_id is None:
             return None
         return Principal(principal_id=principal_id)
+
+
+def extract_bearer_token(authorization_header: str | None) -> str | None:
+    if authorization_header is None:
+        return None
+    value = authorization_header.strip()
+    if not value:
+        return None
+    parts = value.split(" ", 1)
+    if len(parts) == 2 and parts[0].lower() == "bearer":
+        token = parts[1].strip()
+        return token or None
+    return value

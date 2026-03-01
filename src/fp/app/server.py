@@ -7,10 +7,8 @@ from dataclasses import asdict
 from typing import Any, Callable
 from uuid import uuid4
 
-from fp.economy import DisputeService, MeteringService, ReceiptService, SettlementService
-from fp.graph import EntityRegistry, MembershipRegistry, OrganizationRegistry
-from fp.observability import CostMeter, CostModel, MetricsRegistry, TokenMeter, export_audit_bundle, new_trace_id
-from fp.policy import AllowAllPolicyEngine, PolicyContext, PolicyEngine, PolicyHook
+from fp.observability import export_audit_bundle, new_trace_id
+from fp.policy import PolicyEngine, PolicyHook
 from fp.protocol import (
     Activity,
     ActivityState,
@@ -32,8 +30,8 @@ from fp.protocol import (
     SessionState,
     Settlement,
 )
-from fp.runtime import ActivityEngine, DispatchContext, DispatchEngine, EventEngine, SessionEngine
-from fp.runtime.idempotency import IdempotencyGuard
+from fp.runtime import ContextCompactor, DispatchContext, build_runtime_bundle
+from fp.runtime.modules import GovernanceModule
 from fp.stores.memory import InMemoryStoreBundle
 
 
@@ -60,27 +58,40 @@ class FPServer:
 
         self.fp_version = fp_version
         self.server_entity_id = server_entity_id
-        self.stores = stores or InMemoryStoreBundle()
-        self.policy_engine = policy_engine or AllowAllPolicyEngine()
+        runtime = build_runtime_bundle(stores=stores, policy_engine=policy_engine, receipt_secret=receipt_secret)
+        self.runtime = runtime
+        self.stores = runtime.stores
+        self.policy_engine = runtime.policy_engine
 
-        self.entities = EntityRegistry(self.stores.entities)
-        self.organizations = OrganizationRegistry(self.stores.entities, self.stores.organizations)
-        self.memberships = MembershipRegistry(self.stores.organizations, self.stores.memberships)
+        self.graph = runtime.graph
+        self.entities = self.graph.entities
+        self.organizations = self.graph.organizations
+        self.memberships = self.graph.memberships
 
-        self.sessions = SessionEngine(self.stores.sessions)
-        self.activities = ActivityEngine(self.stores.activities)
-        self.dispatch = DispatchEngine()
-        self.events = EventEngine(self.stores.events)
-        self.idempotency = IdempotencyGuard()
+        self.session_module = runtime.sessions
+        self.sessions = self.session_module
+        self.activity_module = runtime.activities
+        self.activities = self.activity_module
+        self.dispatch = self.activity_module.dispatch
+        self.event_module = runtime.events
+        self.events = self.event_module
+        self.idempotency = runtime.idempotency
 
-        self.metering = MeteringService()
-        self.receipts = ReceiptService(secret=receipt_secret)
-        self.settlements = SettlementService()
-        self.disputes = DisputeService()
+        self.economy_module = runtime.economy
+        self.metering = self.economy_module.metering
+        self.receipts = self.economy_module.receipts
+        self.settlements = self.economy_module.settlements
+        self.disputes = self.economy_module.disputes
 
-        self.metrics = MetricsRegistry()
-        self.token_meter = TokenMeter()
-        self.cost_meter = CostMeter(CostModel(input_per_1k_tokens=0.001, output_per_1k_tokens=0.002))
+        self.metrics = runtime.metrics
+        self.token_meter = runtime.token_meter
+        self.cost_meter = runtime.cost_meter
+        self._token_budget_enforcer: Callable[[dict[str, Any]], None] | None = None
+        self._context_compactor = ContextCompactor(max_inline_bytes=4096)
+        self.governance_module = GovernanceModule(
+            policy_engine=self.policy_engine,
+            provenance_recorder=self.provenance_record,
+        )
 
     # -------- Handshake --------
 
@@ -284,6 +295,12 @@ class FPServer:
     def register_operation(self, name: str, handler: Callable[[dict[str, Any]], Any]) -> None:
         self.dispatch.register(name, handler)
 
+    def set_token_budget_enforcer(self, enforcer: Callable[[dict[str, Any]], None] | None) -> None:
+        self._token_budget_enforcer = enforcer
+
+    def set_result_compaction(self, *, max_inline_bytes: int | None = 4096, preview_chars: int = 160) -> None:
+        self._context_compactor = ContextCompactor(max_inline_bytes=max_inline_bytes, preview_chars=preview_chars)
+
     def activities_start(
         self,
         *,
@@ -316,6 +333,7 @@ class FPServer:
                 message="activity initiator must be a session participant",
                 details={"session_id": session_id, "initiator_entity_id": initiator_entity_id},
             )
+        self._enforce_token_budget(session=session, operation=operation, input_payload=input_payload)
 
         request_fingerprint = self._idempotency_fingerprint(
             session_id=session_id,
@@ -384,8 +402,16 @@ class FPServer:
             else:
                 if not (isinstance(output, dict) and output.get("state") == "working"):
                     result_payload = output if isinstance(output, dict) else {"value": output}
-                    activity = self.activities.complete(activity.activity_id, result_payload=result_payload)
-                    usage = self.token_meter.measure(input_payload=input_payload, output_payload=result_payload)
+                    compacted = self._context_compactor.compact(result_payload)
+                    activity = self.activities.complete(
+                        activity.activity_id,
+                        result_payload=compacted.inline_payload,
+                        result_ref=compacted.result_ref,
+                    )
+                    usage = self.token_meter.measure(
+                        input_payload=input_payload,
+                        output_payload=compacted.inline_payload or {},
+                    )
                     estimated_cost = self.cost_meter.estimate(usage)
                     self._emit_event(
                         event_type="activity.completed",
@@ -395,6 +421,8 @@ class FPServer:
                         payload={
                             "usage": asdict(usage),
                             "estimated_cost": round(estimated_cost, 8),
+                            "result_ref": compacted.result_ref,
+                            "compacted": compacted.compacted,
                         },
                     )
 
@@ -445,13 +473,19 @@ class FPServer:
         producer_entity_id: str | None = None,
     ) -> Activity:
         source_entity_id = producer_entity_id or self.server_entity_id
-        completed = self.activities.complete(activity_id, result_payload=result_payload, result_ref=result_ref)
+        resolved_payload = result_payload
+        resolved_result_ref = result_ref
+        if result_payload is not None and result_ref is None:
+            compacted = self._context_compactor.compact(result_payload)
+            resolved_payload = compacted.inline_payload
+            resolved_result_ref = compacted.result_ref
+        completed = self.activities.complete(activity_id, result_payload=resolved_payload, result_ref=resolved_result_ref)
         self._emit_event(
             event_type="activity.completed",
             session_id=completed.session_id,
             activity_id=completed.activity_id,
             producer_entity_id=source_entity_id,
-            payload={"result_ref": result_ref},
+            payload={"result_ref": resolved_result_ref},
         )
         return completed
 
@@ -672,42 +706,14 @@ class FPServer:
         operation: str | None = None,
         payload: dict[str, Any] | None = None,
     ) -> None:
-        context = PolicyContext(
+        self.governance_module.enforce(
             hook=hook,
             actor_entity_id=actor_entity_id,
             session_id=session_id,
             activity_id=activity_id,
             operation=operation,
-            payload=payload or {},
+            payload=payload,
         )
-        decision = self.policy_engine.evaluate(context)
-        subject_refs = [s for s in [session_id, activity_id, actor_entity_id] if s]
-        if not subject_refs and payload:
-            for key, value in payload.items():
-                if key.endswith("_id") or key.endswith("_ref"):
-                    if isinstance(value, str) and value:
-                        subject_refs.append(value)
-                elif key.endswith("_refs") and isinstance(value, list):
-                    subject_refs.extend(str(item) for item in value if item)
-        if not subject_refs:
-            subject_refs = [f"policy-hook:{hook.value}"]
-        self.provenance_record(
-            subject_refs=subject_refs,
-            policy_refs=[decision.policy_ref or "policy:default"],
-            outcome="allowed" if decision.allowed else "denied",
-            signer_ref="fp:system:policy-engine",
-            metadata={"decision_id": decision.decision_id, "reason": decision.reason, "hook": hook.value},
-        )
-        if not decision.allowed:
-            raise FPError(
-                FPErrorCode.POLICY_DENIED,
-                message=decision.reason,
-                details={
-                    "decision_id": decision.decision_id,
-                    "policy_ref": decision.policy_ref,
-                    "hook": hook.value,
-                },
-            )
 
     def _emit_event(
         self,
@@ -761,6 +767,31 @@ class FPServer:
             "input_payload": input_payload,
         }
         return json.dumps(stable_payload, sort_keys=True, separators=(",", ":"))
+
+    def _enforce_token_budget(self, *, session: Session, operation: str, input_payload: dict[str, Any]) -> None:
+        token_limit = session.budget.token_limit
+        estimated_input_tokens = self.token_meter.estimate_payload_tokens(input_payload)
+        if token_limit is not None and estimated_input_tokens > token_limit:
+            raise FPError(
+                FPErrorCode.RATE_LIMITED,
+                message="session token budget exceeded by request",
+                details={
+                    "session_id": session.session_id,
+                    "operation": operation,
+                    "estimated_input_tokens": estimated_input_tokens,
+                    "token_limit": token_limit,
+                },
+            )
+        if self._token_budget_enforcer is None:
+            return
+        self._token_budget_enforcer(
+            {
+                "session_id": session.session_id,
+                "operation": operation,
+                "estimated_input_tokens": estimated_input_tokens,
+                "token_limit": token_limit,
+            }
+        )
 
 
 def make_default_entity(entity_id: str, kind: EntityKind, display_name: str | None = None) -> Entity:

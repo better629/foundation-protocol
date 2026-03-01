@@ -19,109 +19,83 @@ from fp.protocol import (
     Settlement,
 )
 
+from .base import InMemoryGroupedKVStore, InMemoryKVStore
+
 
 class InMemoryEntityStore:
     def __init__(self) -> None:
-        self._lock = RLock()
-        self._entities: dict[str, Entity] = {}
+        self._store = InMemoryKVStore[str, Entity](key_fn=lambda entity: entity.entity_id)
 
     def put(self, entity: Entity) -> None:
-        with self._lock:
-            self._entities[entity.entity_id] = deepcopy(entity)
+        self._store.put(entity)
 
     def get(self, entity_id: str) -> Entity | None:
-        with self._lock:
-            entity = self._entities.get(entity_id)
-            return deepcopy(entity) if entity is not None else None
+        return self._store.get(entity_id)
 
     def list(self) -> list[Entity]:
-        with self._lock:
-            return [deepcopy(entity) for entity in self._entities.values()]
+        return self._store.list()
 
 
 class InMemoryOrganizationStore:
     def __init__(self) -> None:
-        self._lock = RLock()
-        self._organizations: dict[str, Organization] = {}
+        self._store = InMemoryKVStore[str, Organization](key_fn=lambda organization: organization.organization_id)
 
     def put(self, organization: Organization) -> None:
-        with self._lock:
-            self._organizations[organization.organization_id] = deepcopy(organization)
+        self._store.put(organization)
 
     def get(self, organization_id: str) -> Organization | None:
-        with self._lock:
-            organization = self._organizations.get(organization_id)
-            return deepcopy(organization) if organization is not None else None
+        return self._store.get(organization_id)
 
     def list(self) -> list[Organization]:
-        with self._lock:
-            return [deepcopy(organization) for organization in self._organizations.values()]
+        return self._store.list()
 
 
 class InMemoryMembershipStore:
     def __init__(self) -> None:
-        self._lock = RLock()
-        self._memberships: dict[str, Membership] = {}
-        self._by_organization: dict[str, set[str]] = defaultdict(set)
+        self._store = InMemoryGroupedKVStore[str, str, Membership](
+            key_fn=lambda membership: membership.membership_id,
+            group_fn=lambda membership: membership.organization_id,
+        )
 
     def put(self, membership: Membership) -> None:
-        with self._lock:
-            self._memberships[membership.membership_id] = deepcopy(membership)
-            self._by_organization[membership.organization_id].add(membership.membership_id)
+        self._store.put(membership)
 
     def get(self, membership_id: str) -> Membership | None:
-        with self._lock:
-            membership = self._memberships.get(membership_id)
-            return deepcopy(membership) if membership is not None else None
+        return self._store.get(membership_id)
 
     def by_organization(self, organization_id: str) -> list[Membership]:
-        with self._lock:
-            return [
-                deepcopy(self._memberships[membership_id])
-                for membership_id in sorted(self._by_organization.get(organization_id, set()))
-                if membership_id in self._memberships
-            ]
+        return self._store.by_group(organization_id)
 
 
 class InMemorySessionStore:
     def __init__(self) -> None:
-        self._lock = RLock()
-        self._sessions: dict[str, Session] = {}
+        self._store = InMemoryKVStore[str, Session](key_fn=lambda session: session.session_id)
 
     def put(self, session: Session) -> None:
-        with self._lock:
-            self._sessions[session.session_id] = deepcopy(session)
+        self._store.put(session)
 
     def get(self, session_id: str) -> Session | None:
-        with self._lock:
-            session = self._sessions.get(session_id)
-            return deepcopy(session) if session is not None else None
+        return self._store.get(session_id)
 
     def list(self) -> list[Session]:
-        with self._lock:
-            return [deepcopy(session) for session in self._sessions.values()]
+        return self._store.list()
 
 
 class InMemoryActivityStore:
     def __init__(self) -> None:
-        self._lock = RLock()
-        self._activities: dict[str, Activity] = {}
+        self._store = InMemoryKVStore[str, Activity](key_fn=lambda activity: activity.activity_id)
 
     def put(self, activity: Activity) -> None:
-        with self._lock:
-            self._activities[activity.activity_id] = deepcopy(activity)
+        self._store.put(activity)
 
     def get(self, activity_id: str) -> Activity | None:
-        with self._lock:
-            activity = self._activities.get(activity_id)
-            return deepcopy(activity) if activity is not None else None
+        return self._store.get(activity_id)
 
     def list(self, *, session_id: str | None = None) -> list[Activity]:
-        with self._lock:
-            activities = [deepcopy(activity) for activity in self._activities.values()]
-            if session_id is None:
-                return activities
-            return [activity for activity in activities if activity.session_id == session_id]
+        items = self._store.list()
+        if session_id is None:
+            return items
+        return [activity for activity in items if activity.session_id == session_id]
 
 
 class InMemoryEventStore:
@@ -152,73 +126,55 @@ class InMemoryEventStore:
 
 class InMemoryReceiptStore:
     def __init__(self) -> None:
-        self._lock = RLock()
-        self._receipts: dict[str, Receipt] = {}
+        self._store = InMemoryKVStore[str, Receipt](key_fn=lambda receipt: receipt.receipt_id)
 
     def put(self, receipt: Receipt) -> None:
-        with self._lock:
-            self._receipts[receipt.receipt_id] = deepcopy(receipt)
+        self._store.put(receipt)
 
     def get(self, receipt_id: str) -> Receipt | None:
-        with self._lock:
-            receipt = self._receipts.get(receipt_id)
-            return deepcopy(receipt) if receipt is not None else None
+        return self._store.get(receipt_id)
 
     def list(self) -> list[Receipt]:
-        with self._lock:
-            return [deepcopy(receipt) for receipt in self._receipts.values()]
+        return self._store.list()
 
 
 class InMemorySettlementStore:
     def __init__(self) -> None:
-        self._lock = RLock()
-        self._settlements: dict[str, Settlement] = {}
+        self._store = InMemoryKVStore[str, Settlement](key_fn=lambda settlement: settlement.settlement_id)
 
     def put(self, settlement: Settlement) -> None:
-        with self._lock:
-            self._settlements[settlement.settlement_id] = deepcopy(settlement)
+        self._store.put(settlement)
 
     def get(self, settlement_id: str) -> Settlement | None:
-        with self._lock:
-            settlement = self._settlements.get(settlement_id)
-            return deepcopy(settlement) if settlement is not None else None
+        return self._store.get(settlement_id)
 
     def list(self) -> list[Settlement]:
-        with self._lock:
-            return [deepcopy(settlement) for settlement in self._settlements.values()]
+        return self._store.list()
 
 
 class InMemoryDisputeStore:
     def __init__(self) -> None:
-        self._lock = RLock()
-        self._disputes: dict[str, Dispute] = {}
+        self._store = InMemoryKVStore[str, Dispute](key_fn=lambda dispute: dispute.dispute_id)
 
     def put(self, dispute: Dispute) -> None:
-        with self._lock:
-            self._disputes[dispute.dispute_id] = deepcopy(dispute)
+        self._store.put(dispute)
 
     def get(self, dispute_id: str) -> Dispute | None:
-        with self._lock:
-            dispute = self._disputes.get(dispute_id)
-            return deepcopy(dispute) if dispute is not None else None
+        return self._store.get(dispute_id)
 
     def list(self) -> list[Dispute]:
-        with self._lock:
-            return [deepcopy(dispute) for dispute in self._disputes.values()]
+        return self._store.list()
 
 
 class InMemoryProvenanceStore:
     def __init__(self) -> None:
-        self._lock = RLock()
-        self._records: dict[str, ProvenanceRecord] = {}
+        self._store = InMemoryKVStore[str, ProvenanceRecord](key_fn=lambda record: record.record_id)
 
     def put(self, record: ProvenanceRecord) -> None:
-        with self._lock:
-            self._records[record.record_id] = deepcopy(record)
+        self._store.put(record)
 
     def list(self) -> list[ProvenanceRecord]:
-        with self._lock:
-            return [deepcopy(record) for record in self._records.values()]
+        return self._store.list()
 
 
 class InMemoryStoreBundle:

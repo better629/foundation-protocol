@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta, timezone
 from threading import RLock
 from typing import Any
 from urllib.error import HTTPError, URLError
@@ -22,6 +23,12 @@ class FPServerCard:
     well_known_url: str
     capabilities: dict[str, Any] = field(default_factory=dict)
     metadata: dict[str, Any] = field(default_factory=dict)
+    sign_alg: str | None = None
+    key_ref: str | None = None
+    signature: str | None = None
+    issued_at: str | None = None
+    expires_at: str | None = None
+    ttl_seconds: int | None = None
 
     def __post_init__(self) -> None:
         if not self.card_id.strip():
@@ -34,9 +41,26 @@ class FPServerCard:
             raise FPError(FPErrorCode.INVALID_ARGUMENT, "rpc_url must be non-empty")
         if not self.well_known_url.strip():
             raise FPError(FPErrorCode.INVALID_ARGUMENT, "well_known_url must be non-empty")
+        if self.ttl_seconds is not None and self.ttl_seconds <= 0:
+            raise FPError(FPErrorCode.INVALID_ARGUMENT, "ttl_seconds must be > 0")
+        if any(value is not None for value in (self.sign_alg, self.key_ref, self.signature)):
+            if not self.sign_alg or not self.key_ref or not self.signature:
+                raise FPError(
+                    FPErrorCode.INVALID_ARGUMENT,
+                    "sign_alg, key_ref, and signature must be provided together",
+                )
+        if self.issued_at is not None:
+            _parse_iso8601_utc(self.issued_at, field_name="issued_at")
+        if self.expires_at is not None:
+            _parse_iso8601_utc(self.expires_at, field_name="expires_at")
+            if self.issued_at is not None:
+                issued = _parse_iso8601_utc(self.issued_at, field_name="issued_at")
+                expires = _parse_iso8601_utc(self.expires_at, field_name="expires_at")
+                if expires <= issued:
+                    raise FPError(FPErrorCode.INVALID_ARGUMENT, "expires_at must be after issued_at")
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        payload = {
             "card_id": self.card_id,
             "entity_id": self.entity_id,
             "fp_version": self.fp_version,
@@ -45,6 +69,19 @@ class FPServerCard:
             "capabilities": dict(self.capabilities),
             "metadata": dict(self.metadata),
         }
+        if self.sign_alg is not None:
+            payload["sign_alg"] = self.sign_alg
+        if self.key_ref is not None:
+            payload["key_ref"] = self.key_ref
+        if self.signature is not None:
+            payload["signature"] = self.signature
+        if self.issued_at is not None:
+            payload["issued_at"] = self.issued_at
+        if self.expires_at is not None:
+            payload["expires_at"] = self.expires_at
+        if self.ttl_seconds is not None:
+            payload["ttl_seconds"] = self.ttl_seconds
+        return payload
 
     @classmethod
     def from_dict(cls, value: dict[str, Any]) -> "FPServerCard":
@@ -58,6 +95,12 @@ class FPServerCard:
             well_known_url=str(value["well_known_url"]),
             capabilities=dict(value.get("capabilities", {})),
             metadata=dict(value.get("metadata", {})),
+            sign_alg=_optional_str(value.get("sign_alg")),
+            key_ref=_optional_str(value.get("key_ref")),
+            signature=_optional_str(value.get("signature")),
+            issued_at=_optional_str(value.get("issued_at")),
+            expires_at=_optional_str(value.get("expires_at")),
+            ttl_seconds=int(value["ttl_seconds"]) if value.get("ttl_seconds") is not None else None,
         )
 
 
@@ -204,4 +247,36 @@ def fetch_server_card(well_known_url: str, *, timeout_seconds: float = 10.0) -> 
         decoded = json.loads(payload.decode("utf-8"))
     except json.JSONDecodeError as exc:
         raise FPError(FPErrorCode.INTERNAL_ERROR, "server card response is not valid JSON") from exc
-    return FPServerCard.from_dict(decoded)
+    card = FPServerCard.from_dict(decoded)
+    if card.expires_at is not None:
+        expires = _parse_iso8601_utc(card.expires_at, field_name="expires_at")
+        if expires <= datetime.now(tz=timezone.utc):
+            raise FPError(
+                FPErrorCode.NOT_FOUND,
+                message="server card is expired",
+                details={"entity_id": card.entity_id, "expires_at": card.expires_at},
+            )
+    return card
+
+
+def new_unsigned_server_card_fields(ttl_seconds: int = 600) -> tuple[str, str, int]:
+    issued = datetime.now(tz=timezone.utc)
+    expires = issued + timedelta(seconds=ttl_seconds)
+    return (
+        issued.isoformat().replace("+00:00", "Z"),
+        expires.isoformat().replace("+00:00", "Z"),
+        ttl_seconds,
+    )
+
+
+def _optional_str(value: Any) -> str | None:
+    if value is None:
+        return None
+    return str(value)
+
+
+def _parse_iso8601_utc(value: str, *, field_name: str) -> datetime:
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(timezone.utc)
+    except ValueError as exc:
+        raise FPError(FPErrorCode.INVALID_ARGUMENT, f"{field_name} must be RFC3339 UTC string") from exc
