@@ -1,5 +1,17 @@
 # Operations
 
+## Runtime guarantees
+
+FP runtime ships with practical production safeguards:
+
+- strict session/activity state-transition validation
+- idempotency fingerprinting for safe retries
+- replay + ack event streams with per-stream backpressure
+- transport reliability (retry/backoff/jitter/circuit-breaker)
+- HTTP keep-alive connection reuse
+- cursor pagination for large list APIs
+- JSON-safe SQLite persistence with typed decoding
+
 ## Quality gates
 
 Run this before release:

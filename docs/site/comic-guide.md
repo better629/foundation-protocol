@@ -138,4 +138,4 @@ The result is operational trust:
 1. run [Getting Started](getting-started.md)
 2. run full scenarios from [Examples](examples.md)
 3. inspect [Architecture](architecture.md)
-4. validate controls via [Production Hardening](production-hardening.md)
+4. validate runtime and deployment checks via [Operations](operations.md)

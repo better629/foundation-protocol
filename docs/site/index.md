@@ -181,8 +181,8 @@ Runnable scenario set: [Examples](examples.md)
 1. Follow [Getting Started](getting-started.md) and run baseline example.
 2. Execute all scenario examples: `bash scripts/run_examples.sh`.
 3. Run quality gate: `bash scripts/quality_gate.sh`.
-4. Review [White Paper Alignment](whitepaper-alignment.md).
-5. Inspect API entry points in [API Reference](api.md).
+4. Inspect API entry points in [API Reference](api.md).
+5. Review runtime and deployment checks in [Operations](operations.md).
 
 ## Engineering posture
 
@@ -204,7 +204,6 @@ FP runtime is designed with high signal-to-noise semantics:
 
 - **Start now**: [Getting Started](getting-started.md)
 - **See architecture boundaries (Mermaid + ASCII diagrams)**: [Architecture](architecture.md)
-- **Validate white-paper intent**: [White Paper Alignment](whitepaper-alignment.md)
 - **Run real scenarios**: [Examples](examples.md)
-- **Check release checklist**: [Release Readiness](release-readiness.md)
+- **Run and deploy safely**: [Operations](operations.md)
 - **Browse full API surface**: [API Reference](api.md)

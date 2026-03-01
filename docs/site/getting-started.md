@@ -258,6 +258,6 @@ Fix: install `.[docs]` extras or rely on CI docs workflow.
 ## Next steps
 
 1. Review [Architecture](architecture.md) for component boundaries.
-2. Review [White Paper Alignment](whitepaper-alignment.md) to verify design intent mapping.
-3. Review [Examples](examples.md) for scenario-level integration templates.
+2. Review [Examples](examples.md) for scenario-level integration templates.
+3. Review [Operations](operations.md) for quality gates and deployment workflow.
 4. Review [API Reference](api.md) for full callable surface.

@@ -2,7 +2,7 @@
 
 FP is a graph-first control plane for multi-entity AI systems.
 
-This repository provides a publish-ready Python reference runtime aligned to the FP white paper: multi-party collaboration, policy-native governance, evidence-first operations, and verifiable value exchange.
+This repository provides a production-ready Python reference runtime for multi-party collaboration, governance, evidence-first operations, and verifiable value exchange.
 
 ## Release-grade highlights
 
@@ -19,18 +19,6 @@ This repository provides a publish-ready Python reference runtime aligned to the
 - Schema-first sync artifacts (`spec -> generated manifest`) with CI drift gate
 - Runnable scenario examples + smoke tests
 - MkDocs + mkdocstrings documentation site with GitHub Pages deployment
-
-## White paper alignment
-
-FP runtime design maps directly to white-paper goals:
-
-1. Graph-first collaboration substrate
-2. Multi-party coordination by default
-3. Evidence-first governance and auditability
-4. Ledger-agnostic but verifiable economic exchange
-5. Token-efficient control-plane messaging
-
-See docs page: `docs/site/whitepaper-alignment.md`.
 
 ## Installation
 
@@ -149,18 +137,6 @@ The quality gate runs:
 3. Compile sanity checks
 4. Spec validation (`spec/fp-core.schema.json`, `spec/fp-openrpc.json`)
 5. Spec-sync drift check (`scripts/check_spec_sync.py`)
-
-## A+ hardening checkpoints
-
-- `FPClient` uses a single transport invocation path (no server bypass path)
-- `AsyncFPServer` public APIs have explicit named signatures
-- In-process async runtime path executes natively (core async engines and async server facade avoid thread-bridge execution)
-- SQLite persistence uses JSON codec (no pickle serialization)
-- `RemoteFPClient` composes shared HTTP JSON-RPC transport logic
-- Paged listing semantics (`limit` + `cursor`) are available across runtime/store surfaces
-- Activity start orchestration is decomposed into dedicated orchestration steps
-- Remote transport has bounded retry/backoff/jitter/circuit-breaker
-- HTTP client supports keep-alive connection reuse for lower latency
 
 ## Documentation
 
