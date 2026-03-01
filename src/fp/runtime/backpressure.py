@@ -10,24 +10,32 @@ from fp.protocol.errors import FPError, FPErrorCode
 
 class BackpressureController:
     def __init__(self, default_window: int = 500) -> None:
-        self._window = default_window
+        if default_window <= 0:
+            raise FPError(FPErrorCode.INVALID_ARGUMENT, "default backpressure window must be > 0")
+        self._default_window = default_window
         self._lock = RLock()
         self._outstanding: dict[str, int] = defaultdict(int)
+        self._windows: dict[str, int] = {}
 
     def configure_stream(self, stream_id: str, *, window: int | None = None) -> None:
         with self._lock:
             if window is not None:
-                self._window = window
+                if window <= 0:
+                    raise FPError(FPErrorCode.INVALID_ARGUMENT, "backpressure window must be > 0")
+                self._windows[stream_id] = window
+            else:
+                self._windows.setdefault(stream_id, self._default_window)
             self._outstanding.setdefault(stream_id, 0)
 
     def on_deliver(self, stream_id: str, delivered_count: int) -> None:
         with self._lock:
             outstanding = self._outstanding[stream_id] + delivered_count
-            if outstanding > self._window:
+            window = self._windows.get(stream_id, self._default_window)
+            if outstanding > window:
                 raise FPError(
                     FPErrorCode.BACKPRESSURE,
                     message="event stream is over backpressure window",
-                    details={"stream_id": stream_id, "window": self._window, "outstanding": outstanding},
+                    details={"stream_id": stream_id, "window": window, "outstanding": outstanding},
                     retryable=True,
                 )
             self._outstanding[stream_id] = outstanding

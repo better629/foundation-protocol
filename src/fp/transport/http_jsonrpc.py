@@ -6,6 +6,7 @@ from dataclasses import asdict, dataclass, is_dataclass
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Callable, Mapping
+from urllib.parse import urlparse
 
 from fp.protocol import (
     ActivityState,
@@ -224,6 +225,11 @@ class JSONRPCDispatcher:
 
     @classmethod
     def from_server(cls, server: Any) -> "JSONRPCDispatcher":
+        def _require_non_empty_string(value: Any, *, field_name: str) -> str:
+            if not isinstance(value, str) or not value.strip():
+                raise ValueError(f"{field_name} must be a non-empty string")
+            return value
+
         def _as_set(value: Any, *, field_name: str) -> set[str]:
             if value is None:
                 return set()
@@ -231,12 +237,61 @@ class JSONRPCDispatcher:
                 return {str(item) for item in value}
             raise FPError(FPErrorCode.INVALID_ARGUMENT, f"{field_name} must be an array")
 
+        def _as_required_set(value: Any, *, field_name: str) -> set[str]:
+            if value is None:
+                raise ValueError(f"{field_name} is required")
+            if not isinstance(value, (set, list, tuple)):
+                raise ValueError(f"{field_name} must be an array")
+            normalized = {str(item) for item in value}
+            if not normalized:
+                raise ValueError(f"{field_name} must not be empty")
+            return normalized
+
         def _as_roles_map(value: Any, *, field_name: str) -> dict[str, set[str]]:
             if value is None:
                 return {}
             if not isinstance(value, dict):
                 raise FPError(FPErrorCode.INVALID_ARGUMENT, f"{field_name} must be an object")
             return {str(entity_id): _as_set(role_values, field_name=f"{field_name}.{entity_id}") for entity_id, role_values in value.items()}
+
+        def _parse_push_config(value: Any) -> dict[str, Any]:
+            if not isinstance(value, dict):
+                raise ValueError("config must be an object")
+            push_config_id = _require_non_empty_string(value.get("push_config_id"), field_name="config.push_config_id")
+            url = _require_non_empty_string(value.get("url"), field_name="config.url")
+            parsed = urlparse(url)
+            if parsed.scheme not in {"http", "https"}:
+                raise ValueError("config.url must use http/https")
+
+            scope = value.get("scope")
+            if not isinstance(scope, dict):
+                raise ValueError("config.scope must be an object")
+            session_id = scope.get("session_id")
+            activity_id = scope.get("activity_id")
+            if session_id is None and activity_id is None:
+                raise ValueError("config.scope requires session_id or activity_id")
+            normalized_scope: dict[str, str] = {}
+            if session_id is not None:
+                normalized_scope["session_id"] = _require_non_empty_string(session_id, field_name="config.scope.session_id")
+            if activity_id is not None:
+                normalized_scope["activity_id"] = _require_non_empty_string(activity_id, field_name="config.scope.activity_id")
+
+            auth = value.get("auth", {})
+            if not isinstance(auth, dict):
+                raise ValueError("config.auth must be an object")
+
+            event_types = value.get("event_types")
+            if not isinstance(event_types, list) or not event_types:
+                raise ValueError("config.event_types must be a non-empty array")
+            normalized_event_types = [_require_non_empty_string(item, field_name="config.event_types[]") for item in event_types]
+
+            return {
+                "push_config_id": push_config_id,
+                "url": url,
+                "scope": normalized_scope,
+                "auth": dict(auth),
+                "event_types": normalized_event_types,
+            }
 
         def _kind_or_none(value: str | None) -> EntityKind | None:
             if value is None:
@@ -282,7 +337,7 @@ class JSONRPCDispatcher:
                 actor_entity_id=p.get("actor_entity_id"),
             ),
             "fp/sessions.create": lambda p: server.sessions_create(
-                participants=_as_set(p.get("participants"), field_name="participants"),
+                participants=_as_required_set(p.get("participants"), field_name="participants"),
                 roles=_as_roles_map(p.get("roles"), field_name="roles"),
                 policy_ref=p.get("policy_ref"),
                 budget=_parse_session_budget(p.get("budget")),
@@ -307,7 +362,7 @@ class JSONRPCDispatcher:
                 session_id=p["session_id"],
                 owner_entity_id=p["owner_entity_id"],
                 initiator_entity_id=p["initiator_entity_id"],
-                operation=p.get("operation", ""),
+                operation=_require_non_empty_string(p.get("operation"), field_name="operation"),
                 input_payload=dict(p.get("input_payload", p.get("input", {}))),
                 activity_id=p.get("activity_id"),
                 idempotency_key=p.get("idempotency_key"),
@@ -338,7 +393,7 @@ class JSONRPCDispatcher:
                 last_event_id=p["last_event_id"],
             ),
             "fp/events.ack": lambda p: server.events_ack(stream_id=p["stream_id"], event_ids=list(p.get("event_ids", []))),
-            "fp/events.pushConfig.set": lambda p: server.push_config_set(p["config"]),
+            "fp/events.pushConfig.set": lambda p: server.push_config_set(_parse_push_config(p.get("config"))),
             "fp/events.pushConfig.get": lambda p: server.push_config_get(p["push_config_id"]),
             "fp/events.pushConfig.list": lambda p: server.push_config_list(
                 session_id=p.get("session_id"),

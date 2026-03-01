@@ -3,7 +3,7 @@
 ## Layered design
 
 ```text
-quickstart -> app -> runtime -> protocol/models -> stores/adapters/transport
+quickstart -> app -> runtime -> protocol/models -> stores/adapters/transport -> federation
 ```
 
 Cross-cutting modules:
@@ -25,6 +25,8 @@ Cross-cutting modules:
 - `fp.adapters`: framework integration boundary (L0 contract)
 - `fp.transport`: protocol transport adapters (inproc/stdio/http/sse/ws)
 - `fp.transport.http_jsonrpc.JSONRPCDispatcher`: JSON-RPC 2.0 method dispatch layer
+- `fp.transport.http_publish.FPHTTPPublishedServer`: publish local FP runtime as HTTP endpoint + well-known server card
+- `fp.federation`: server card model, publish directory, network resolver, and remote FP client
 
 ## Reliability semantics
 
@@ -41,3 +43,10 @@ Cross-cutting modules:
 - Structured events: avoid re-sending large context blocks.
 - Delta-friendly updates: push only changed fields when possible.
 - Metering hooks: measure token usage and cost per activity path.
+
+## Federated deployment model
+
+- each entity can expose an independent FP runtime endpoint
+- published server card enables global entity->endpoint resolution
+- remote entities can collaborate via FP method calls without sharing process/runtime
+- governance and economy semantics remain identical for local and remote paths

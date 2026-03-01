@@ -102,6 +102,54 @@ class JSONRPCTransportTests(unittest.TestCase):
         assert got is not None
         self.assertEqual(got["result"]["session_id"], session_id)
 
+    def test_activities_start_requires_non_empty_operation(self) -> None:
+        server = FPServer()
+        server.register_entity(make_default_entity("fp:agent:a", EntityKind.AGENT))
+        server.register_entity(make_default_entity("fp:agent:b", EntityKind.AGENT))
+        session = server.sessions_create(
+            participants={"fp:agent:a", "fp:agent:b"},
+            roles={"fp:agent:a": {"coordinator"}, "fp:agent:b": {"worker"}},
+        )
+        dispatcher = JSONRPCDispatcher.from_server(server)
+
+        response = dispatcher.handle(
+            {
+                "jsonrpc": "2.0",
+                "id": "bad-op",
+                "method": "fp/activities.start",
+                "params": {
+                    "session_id": session.session_id,
+                    "owner_entity_id": "fp:agent:b",
+                    "initiator_entity_id": "fp:agent:a",
+                    "input_payload": {"q": "x"},
+                },
+            }
+        )
+        self.assertIsNotNone(response)
+        assert response is not None
+        self.assertEqual(response["error"]["code"], -32602)
+
+    def test_push_config_set_rejects_malformed_payload(self) -> None:
+        server = FPServer()
+        dispatcher = JSONRPCDispatcher.from_server(server)
+
+        response = dispatcher.handle(
+            {
+                "jsonrpc": "2.0",
+                "id": "bad-push",
+                "method": "fp/events.pushConfig.set",
+                "params": {
+                    "config": {
+                        "push_config_id": "pcfg-1",
+                        "scope": {"session_id": "sess-1"},
+                    }
+                },
+            }
+        )
+        self.assertIsNotNone(response)
+        assert response is not None
+        self.assertEqual(response["error"]["code"], -32602)
+
 
 if __name__ == "__main__":
     unittest.main()

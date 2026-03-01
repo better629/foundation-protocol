@@ -3,7 +3,7 @@ from __future__ import annotations
 import unittest
 
 from fp.app import FPServer, make_default_entity
-from fp.protocol import ActivityState, EntityKind, FPError, FPErrorCode
+from fp.protocol import ActivityState, EntityKind, FPError, FPErrorCode, SessionState
 
 
 def _register_basics(server: FPServer) -> str:
@@ -305,6 +305,62 @@ class CoreConformanceTests(unittest.TestCase):
                 roles_patch={"fp:agent:ghost": {"observer"}},
             )
         self.assertIs(exc.exception.code, FPErrorCode.NOT_FOUND)
+
+    def test_sessions_update_rejects_invalid_state_transition(self) -> None:
+        server = FPServer()
+        session_id = _register_basics(server)
+
+        with self.assertRaises(FPError) as exc:
+            server.sessions_update(session_id=session_id, state=SessionState.CREATED)
+        self.assertIs(exc.exception.code, FPErrorCode.INVALID_STATE_TRANSITION)
+
+    def test_sessions_allow_pause_resume_and_graceful_close(self) -> None:
+        server = FPServer()
+        session_id = _register_basics(server)
+
+        paused = server.sessions_update(session_id=session_id, state=SessionState.PAUSED)
+        self.assertIs(paused.state, SessionState.PAUSED)
+
+        resumed = server.sessions_update(session_id=session_id, state=SessionState.ACTIVE)
+        self.assertIs(resumed.state, SessionState.ACTIVE)
+
+        closing = server.sessions_update(session_id=session_id, state=SessionState.CLOSING)
+        self.assertIs(closing.state, SessionState.CLOSING)
+
+        closed = server.sessions_close(session_id=session_id, reason="done")
+        self.assertIs(closed.state, SessionState.CLOSED)
+
+    def test_sessions_update_rejects_empty_roles_patch(self) -> None:
+        server = FPServer()
+        session_id = _register_basics(server)
+        with self.assertRaises(FPError) as exc:
+            server.sessions_update(session_id=session_id, roles_patch={"fp:agent:a": set()})
+        self.assertIs(exc.exception.code, FPErrorCode.INVALID_ARGUMENT)
+
+    def test_push_config_set_requires_valid_shape(self) -> None:
+        server = FPServer()
+        session_id = _register_basics(server)
+
+        with self.assertRaises(FPError) as exc:
+            server.push_config_set(
+                {
+                    "push_config_id": "pcfg-invalid",
+                    "scope": {"session_id": session_id},
+                }
+            )
+        self.assertIs(exc.exception.code, FPErrorCode.INVALID_ARGUMENT)
+
+    def test_sessions_get_returns_defensive_copy(self) -> None:
+        server = FPServer()
+        session_id = _register_basics(server)
+
+        first = server.sessions_get(session_id)
+        first.participants.add("fp:agent:tamper")
+        first.roles["fp:agent:a"].add("tampered-role")
+
+        second = server.sessions_get(session_id)
+        self.assertNotIn("fp:agent:tamper", second.participants)
+        self.assertNotIn("tampered-role", second.roles["fp:agent:a"])
 
 
 if __name__ == "__main__":

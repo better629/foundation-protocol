@@ -25,16 +25,24 @@ plugins:
             show_signature_annotations: true
 markdown_extensions:
   - admonition
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.highlight
   - pymdownx.inlinehilite
   - toc:
       permalink: true
+extra_javascript:
+  - https://unpkg.com/mermaid@10/dist/mermaid.min.js
+  - javascripts/mermaid-init.js
 strict: true
 nav:
   - Home: index.md
   - Getting Started: getting-started.md
   - Architecture: architecture.md
+  - Production Hardening: production-hardening.md
   - White Paper Alignment: whitepaper-alignment.md
   - Examples: examples.md
   - Operations: operations.md

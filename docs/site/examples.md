@@ -90,3 +90,19 @@ Run:
 ```bash
 PYTHONPATH=src python3 -m examples.scenarios.transport_jsonrpc
 ```
+
+### 6) Federated server discovery and remote collaboration
+
+File: `examples/scenarios/federated_discovery_trade.py`
+
+Shows:
+
+- entity-owned FP server publication over HTTP
+- discovery through well-known server card + directory
+- remote session/activity call for cross-entity collaboration
+
+Run:
+
+```bash
+PYTHONPATH=src python3 -m examples.scenarios.federated_discovery_trade
+```

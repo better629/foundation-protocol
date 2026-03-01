@@ -5,6 +5,15 @@ from __future__ import annotations
 from fp.protocol import FPError, FPErrorCode, Session, SessionBudget, SessionState, utc_now
 from fp.stores.interfaces import SessionStore
 
+_ALLOWED_SESSION_TRANSITIONS: dict[SessionState, set[SessionState]] = {
+    SessionState.CREATED: {SessionState.ACTIVE, SessionState.CLOSING, SessionState.CLOSED, SessionState.FAILED},
+    SessionState.ACTIVE: {SessionState.PAUSED, SessionState.CLOSING, SessionState.CLOSED, SessionState.FAILED},
+    SessionState.PAUSED: {SessionState.ACTIVE, SessionState.CLOSING, SessionState.CLOSED, SessionState.FAILED},
+    SessionState.CLOSING: {SessionState.CLOSED, SessionState.FAILED},
+    SessionState.CLOSED: set(),
+    SessionState.FAILED: set(),
+}
+
 
 class SessionEngine:
     def __init__(self, store: SessionStore) -> None:
@@ -110,10 +119,22 @@ class SessionEngine:
         if budget is not None:
             session.budget = budget
         if state is not None:
+            if state is not session.state and state not in _ALLOWED_SESSION_TRANSITIONS[session.state]:
+                raise FPError(
+                    FPErrorCode.INVALID_STATE_TRANSITION,
+                    message=f"{session.state.value} -> {state.value} is not allowed",
+                )
             session.state = state
         if roles_patch:
             for entity_id, role_set in roles_patch.items():
-                session.roles[entity_id] = set(role_set)
+                normalized = set(role_set)
+                if not normalized:
+                    raise FPError(
+                        FPErrorCode.INVALID_ARGUMENT,
+                        message="session role set must not be empty",
+                        details={"entity_id": entity_id},
+                    )
+                session.roles[entity_id] = normalized
                 session.participants.add(entity_id)
         session.updated_at = utc_now()
         self._store.put(session)
@@ -121,6 +142,13 @@ class SessionEngine:
 
     def close(self, session_id: str, reason: str | None = None) -> Session:
         session = self.get(session_id)
+        if session.state is SessionState.CLOSED:
+            return session
+        if SessionState.CLOSED not in _ALLOWED_SESSION_TRANSITIONS[session.state]:
+            raise FPError(
+                FPErrorCode.INVALID_STATE_TRANSITION,
+                f"cannot close session in state: {session.state.value}",
+            )
         session.state = SessionState.CLOSED
         if reason:
             session.metadata["close_reason"] = reason

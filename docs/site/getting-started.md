@@ -162,7 +162,42 @@ Runnable reference:
 PYTHONPATH=src python3 -m examples.scenarios.transport_jsonrpc
 ```
 
-## 6) Run all provided scenarios
+## 6) Publish your FPServer for network discovery and collaboration
+
+FP supports federated deployment where each entity can publish its own runtime and be discovered by others.
+
+```python
+from fp.app import FPServer, make_default_entity
+from fp.federation import InMemoryDirectory, NetworkResolver, fetch_server_card
+from fp.protocol import EntityKind
+from fp.transport import FPHTTPPublishedServer
+
+seller = FPServer(server_entity_id="fp:system:seller")
+seller.register_entity(make_default_entity("fp:agent:seller", EntityKind.AGENT))
+seller.register_entity(make_default_entity("fp:agent:buyer", EntityKind.AGENT))
+seller.register_operation("trade.quote", lambda payload: {"asset": payload["asset"], "price": 42.0})
+
+directory = InMemoryDirectory()
+with FPHTTPPublishedServer(seller, publish_entity_id="fp:agent:seller", host="127.0.0.1", port=0) as published:
+    card = fetch_server_card(published.well_known_url)
+    directory.publish(card)
+    remote = NetworkResolver(directory).connect("fp:agent:seller")
+    print(remote.ping())
+```
+
+Runnable reference:
+
+```bash
+PYTHONPATH=src python3 -m examples.scenarios.federated_discovery_trade
+```
+
+This demonstrates:
+
+- entity-owned `FPServer` publication via well-known server card
+- directory-based discovery by entity identity
+- remote JSON-RPC collaboration on sessions/activities
+
+## 7) Run all provided scenarios
 
 ```bash
 bash scripts/run_examples.sh
@@ -175,8 +210,9 @@ This executes:
 - governed transfer
 - economy settlement
 - JSON-RPC dispatch path
+- federated discovery + remote trade quote
 
-## 7) Validate release-grade quality
+## 8) Validate release-grade quality
 
 Run the project quality gate:
 

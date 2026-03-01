@@ -32,9 +32,17 @@
 
 ::: fp.transport.http_jsonrpc
 
+## `fp.transport.http_publish`
+
+::: fp.transport.http_publish
+
 ## `fp.transport.websocket`
 
 ::: fp.transport.websocket
+
+## `fp.federation.network`
+
+::: fp.federation.network
 
 ## `fp.quickstart.agent`
 

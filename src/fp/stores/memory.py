@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from copy import deepcopy
 from threading import RLock
 
 from fp.protocol import (
@@ -26,15 +27,16 @@ class InMemoryEntityStore:
 
     def put(self, entity: Entity) -> None:
         with self._lock:
-            self._entities[entity.entity_id] = entity
+            self._entities[entity.entity_id] = deepcopy(entity)
 
     def get(self, entity_id: str) -> Entity | None:
         with self._lock:
-            return self._entities.get(entity_id)
+            entity = self._entities.get(entity_id)
+            return deepcopy(entity) if entity is not None else None
 
     def list(self) -> list[Entity]:
         with self._lock:
-            return list(self._entities.values())
+            return [deepcopy(entity) for entity in self._entities.values()]
 
 
 class InMemoryOrganizationStore:
@@ -44,15 +46,16 @@ class InMemoryOrganizationStore:
 
     def put(self, organization: Organization) -> None:
         with self._lock:
-            self._organizations[organization.organization_id] = organization
+            self._organizations[organization.organization_id] = deepcopy(organization)
 
     def get(self, organization_id: str) -> Organization | None:
         with self._lock:
-            return self._organizations.get(organization_id)
+            organization = self._organizations.get(organization_id)
+            return deepcopy(organization) if organization is not None else None
 
     def list(self) -> list[Organization]:
         with self._lock:
-            return list(self._organizations.values())
+            return [deepcopy(organization) for organization in self._organizations.values()]
 
 
 class InMemoryMembershipStore:
@@ -63,17 +66,18 @@ class InMemoryMembershipStore:
 
     def put(self, membership: Membership) -> None:
         with self._lock:
-            self._memberships[membership.membership_id] = membership
+            self._memberships[membership.membership_id] = deepcopy(membership)
             self._by_organization[membership.organization_id].add(membership.membership_id)
 
     def get(self, membership_id: str) -> Membership | None:
         with self._lock:
-            return self._memberships.get(membership_id)
+            membership = self._memberships.get(membership_id)
+            return deepcopy(membership) if membership is not None else None
 
     def by_organization(self, organization_id: str) -> list[Membership]:
         with self._lock:
             return [
-                self._memberships[membership_id]
+                deepcopy(self._memberships[membership_id])
                 for membership_id in sorted(self._by_organization.get(organization_id, set()))
                 if membership_id in self._memberships
             ]
@@ -86,15 +90,16 @@ class InMemorySessionStore:
 
     def put(self, session: Session) -> None:
         with self._lock:
-            self._sessions[session.session_id] = session
+            self._sessions[session.session_id] = deepcopy(session)
 
     def get(self, session_id: str) -> Session | None:
         with self._lock:
-            return self._sessions.get(session_id)
+            session = self._sessions.get(session_id)
+            return deepcopy(session) if session is not None else None
 
     def list(self) -> list[Session]:
         with self._lock:
-            return list(self._sessions.values())
+            return [deepcopy(session) for session in self._sessions.values()]
 
 
 class InMemoryActivityStore:
@@ -104,15 +109,16 @@ class InMemoryActivityStore:
 
     def put(self, activity: Activity) -> None:
         with self._lock:
-            self._activities[activity.activity_id] = activity
+            self._activities[activity.activity_id] = deepcopy(activity)
 
     def get(self, activity_id: str) -> Activity | None:
         with self._lock:
-            return self._activities.get(activity_id)
+            activity = self._activities.get(activity_id)
+            return deepcopy(activity) if activity is not None else None
 
     def list(self, *, session_id: str | None = None) -> list[Activity]:
         with self._lock:
-            activities = list(self._activities.values())
+            activities = [deepcopy(activity) for activity in self._activities.values()]
             if session_id is None:
                 return activities
             return [activity for activity in activities if activity.session_id == session_id]
@@ -127,7 +133,7 @@ class InMemoryEventStore:
         if not events:
             return
         with self._lock:
-            self._streams[stream_key].extend(events)
+            self._streams[stream_key].extend(deepcopy(events))
 
     def replay_from(self, stream_key: str, last_event_id: str | None, *, limit: int) -> list[FPEvent]:
         with self._lock:
@@ -141,7 +147,7 @@ class InMemoryEventStore:
                     if event.event_id == last_event_id:
                         start_idx = idx + 1
                         break
-            return events[start_idx : start_idx + limit]
+            return deepcopy(events[start_idx : start_idx + limit])
 
 
 class InMemoryReceiptStore:
@@ -151,15 +157,16 @@ class InMemoryReceiptStore:
 
     def put(self, receipt: Receipt) -> None:
         with self._lock:
-            self._receipts[receipt.receipt_id] = receipt
+            self._receipts[receipt.receipt_id] = deepcopy(receipt)
 
     def get(self, receipt_id: str) -> Receipt | None:
         with self._lock:
-            return self._receipts.get(receipt_id)
+            receipt = self._receipts.get(receipt_id)
+            return deepcopy(receipt) if receipt is not None else None
 
     def list(self) -> list[Receipt]:
         with self._lock:
-            return list(self._receipts.values())
+            return [deepcopy(receipt) for receipt in self._receipts.values()]
 
 
 class InMemorySettlementStore:
@@ -169,15 +176,16 @@ class InMemorySettlementStore:
 
     def put(self, settlement: Settlement) -> None:
         with self._lock:
-            self._settlements[settlement.settlement_id] = settlement
+            self._settlements[settlement.settlement_id] = deepcopy(settlement)
 
     def get(self, settlement_id: str) -> Settlement | None:
         with self._lock:
-            return self._settlements.get(settlement_id)
+            settlement = self._settlements.get(settlement_id)
+            return deepcopy(settlement) if settlement is not None else None
 
     def list(self) -> list[Settlement]:
         with self._lock:
-            return list(self._settlements.values())
+            return [deepcopy(settlement) for settlement in self._settlements.values()]
 
 
 class InMemoryDisputeStore:
@@ -187,15 +195,16 @@ class InMemoryDisputeStore:
 
     def put(self, dispute: Dispute) -> None:
         with self._lock:
-            self._disputes[dispute.dispute_id] = dispute
+            self._disputes[dispute.dispute_id] = deepcopy(dispute)
 
     def get(self, dispute_id: str) -> Dispute | None:
         with self._lock:
-            return self._disputes.get(dispute_id)
+            dispute = self._disputes.get(dispute_id)
+            return deepcopy(dispute) if dispute is not None else None
 
     def list(self) -> list[Dispute]:
         with self._lock:
-            return list(self._disputes.values())
+            return [deepcopy(dispute) for dispute in self._disputes.values()]
 
 
 class InMemoryProvenanceStore:
@@ -205,11 +214,11 @@ class InMemoryProvenanceStore:
 
     def put(self, record: ProvenanceRecord) -> None:
         with self._lock:
-            self._records[record.record_id] = record
+            self._records[record.record_id] = deepcopy(record)
 
     def list(self) -> list[ProvenanceRecord]:
         with self._lock:
-            return list(self._records.values())
+            return [deepcopy(record) for record in self._records.values()]
 
 
 class InMemoryStoreBundle:

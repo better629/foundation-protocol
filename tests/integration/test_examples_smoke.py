@@ -4,6 +4,7 @@ import unittest
 
 from examples.quickstart.basic_flow import run_example as run_basic_flow
 from examples.scenarios.economy_settlement import run_example as run_economy_settlement
+from examples.scenarios.federated_discovery_trade import run_example as run_federated_trade
 from examples.scenarios.governed_transfer import run_example as run_governed_transfer
 from examples.scenarios.llm_tool_collaboration import run_example as run_llm_collaboration
 from examples.scenarios.transport_jsonrpc import run_example as run_jsonrpc_transport
@@ -35,6 +36,12 @@ class ExampleSmokeTests(unittest.TestCase):
         result = run_jsonrpc_transport()
         self.assertEqual(result["ping"]["ok"], True)
         self.assertIn("FP_NOT_FOUND", result["missing_session_error_code"])
+
+    def test_federated_discovery_trade_example(self) -> None:
+        result = run_federated_trade()
+        self.assertEqual(result["ping_ok"], True)
+        self.assertEqual(result["state"], "completed")
+        self.assertEqual(result["price"], 42.0)
 
 
 if __name__ == "__main__":

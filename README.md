@@ -13,6 +13,7 @@ This repository provides a publish-ready Python reference runtime aligned to the
 - Replayable event streams with resubscribe, ack, and backpressure safety
 - Fingerprinted idempotency protection for write retries
 - Practical JSON-RPC 2.0 dispatcher for FP method integration
+- Federated FP server publication/discovery + remote client connectivity
 - Runnable scenario examples + smoke tests
 - MkDocs + mkdocstrings documentation site with GitHub Pages deployment
 
@@ -114,6 +115,21 @@ Included scenarios:
 - `examples/scenarios/governed_transfer.py`
 - `examples/scenarios/economy_settlement.py`
 - `examples/scenarios/transport_jsonrpc.py`
+- `examples/scenarios/federated_discovery_trade.py`
+
+## Federated publish/discover/connect
+
+FP now supports entity-owned runtime publication and network discovery:
+
+- publish local runtime via `FPHTTPPublishedServer`
+- expose server card at `/.well-known/fp-server.json`
+- register/discover cards via `InMemoryDirectory` (or your own directory service)
+- connect with `RemoteFPClient` and invoke FP methods remotely
+
+Core modules:
+
+- `src/fp/transport/http_publish.py`
+- `src/fp/federation/network.py`
 
 ## Quality gates
 
@@ -167,6 +183,7 @@ src/fp/
   economy/         # meter/receipt/settlement/dispute
   adapters/        # framework integration contract
   transport/       # inproc/stdio/http/sse/websocket bindings
+  federation/      # publish/discover/connect primitives for entity-owned FP servers
   stores/          # interfaces + memory/sqlite/redis adapters
   policy/          # policy hooks and decisions
   security/        # auth/authz/signature helpers
