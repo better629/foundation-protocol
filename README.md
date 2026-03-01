@@ -162,9 +162,9 @@ Concept walkthrough:
 
 - https://chatsci.github.io/foundation-protocol/concept-guide/
 
-Detailed codebase guide (PPT-ready):
+Detailed internal codebase guide (repository doc, not published online):
 
-- https://chatsci.github.io/foundation-protocol/codebase-guide/
+- docs/fp-codebase-guide.md
 
 ## CI workflows
 
