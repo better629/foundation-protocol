@@ -2,102 +2,122 @@
 
 FP is a graph-first control plane for multi-entity AI systems.
 
-Use FP when your system is no longer a single model call and starts to look like a society of participants: agents, tools, resources, humans, services, and organizations that need shared coordination, governance, and economic accountability.
+When your system evolves from a single model endpoint to a coordinated network of agents, tools, services, resources, organizations, and humans, FP provides the shared protocol substrate to keep execution, governance, evidence, and economics coherent.
 
-## What FP enables
+## TL;DR
 
-FP gives you a common runtime substrate for:
+FP helps you run AI systems that are:
 
-- multi-party sessions with explicit participants and roles
-- stateful activities with strict lifecycle guarantees
-- event streams with replay, ack, and backpressure safety
-- policy-native governance with provenance evidence
-- meter/receipt/settlement/dispute economic primitives
-- transport-safe protocol semantics (JSON-RPC ready)
+- **multi-party** (not single-node)
+- **stateful** (not one-shot)
+- **governed** (not best-effort)
+- **auditable** (not log-forensics-only)
+- **economically accountable** (not opaque cost centers)
 
-## What can you build with FP
+## Is FP right for your system?
 
-Typical system patterns:
+Use FP if at least two are true:
 
-- **LLM workflow platforms**: planner agent + specialized tools + UI renderer in one governed session
-- **Enterprise copilots**: high-risk actions gated by human approval and policy evidence
-- **Service marketplaces**: execution receipts and settlement references for provider/buyer relationships
-- **Multi-agent operations**: role-based collaboration with auditable state transitions
-- **Cross-runtime integration**: one control-plane model over heterogeneous frameworks
+- you orchestrate multiple entities in one user-facing workflow
+- you need role-based controls for sensitive actions
+- you need resumable event streams and explicit state transitions
+- you need portable protocol semantics across runtime/framework boundaries
+- you need settlement/receipt evidence for billable AI work
 
-## Why teams adopt FP
+FP is not intended as a replacement for model inference APIs or domain-specific app logic. It is the **control plane** around them.
 
-1. **One semantic model** instead of per-framework glue contracts.
-2. **Better safety posture** from built-in policy hooks and explicit state transitions.
-3. **Lower operational ambiguity** with traceable events and provenance records.
-4. **Economic accountability** from first-class metering and receipts.
-5. **Scalable integration** via transport-agnostic protocol surfaces.
+## What FP gives each stakeholder
 
-## FP mental model
+| Role | Immediate value |
+| --- | --- |
+| Platform engineer | one semantic model for entities/sessions/activities/events |
+| Agent framework team | stable runtime contract for orchestration and recovery |
+| Governance/compliance | policy decisions and provenance records as first-class outputs |
+| Product engineer | reusable collaboration primitives instead of bespoke glue |
+| Ops/FinOps | token/cost metering plus receipt/settlement artifacts |
 
-Think in six objects:
+## Capability map
 
-1. `Entity`: any addressable participant (agent/tool/resource/service/human/org)
-2. `Organization`: governance container for role catalogs and policy references
-3. `Membership`: role-bearing edge between entity and organization
-4. `Session`: multi-party collaboration context with policy and budget
-5. `Activity`: unit of execution with canonical state machine
-6. `Event`: timeline record for observable behavior and recovery
+### 1) Collaboration substrate
 
-Core control-plane loop:
+- entity registry
+- organization + membership + role semantics
+- session containers with participants, policy, budget
+- activity state machine with deterministic transitions
+
+### 2) Runtime reliability
+
+- idempotent write retries with fingerprint conflict detection
+- event stream replay + resubscribe + ack
+- stream backpressure control
+- explicit semantic error model (`FP_*` codes)
+
+### 3) Governance and evidence
+
+- policy hooks for pre-invoke / role-change / settlement checks
+- allow/deny decisions persisted as provenance records
+- audit bundle export for timeline reconstruction
+
+### 4) Economy primitives
+
+- meter records for usage attribution
+- signed receipts for execution evidence
+- settlement lifecycle and dispute objects
+
+### 5) Integration surface
+
+- quickstart APIs for rapid adoption
+- app-layer server/client APIs for production wiring
+- JSON-RPC dispatcher for service-facing protocol endpoints
+
+## End-to-end control-plane loop
 
 1. Register entities.
-2. Create a session with participants and roles.
-3. Start activities against registered operations.
+2. Create session with participants and roles.
+3. Start activity (policy checks + idempotency semantics).
 4. Stream events and ack consumption.
-5. Export evidence/economy artifacts when needed.
+5. Complete activity and capture usage/cost evidence.
+6. Issue receipt and settlement artifacts if required.
+7. Export audit bundle for governance/reporting.
 
-## FP design principles
+## Example outcomes you can implement
 
-- **Graph-first**: participants and relationships are first-class, not hidden in payloads.
-- **Multi-party by default**: collaboration is baseline, not a bolt-on mode.
-- **Evidence-first**: policy decisions and critical actions produce protocol-visible records.
-- **Progressive disclosure**: exchange compact metadata first, fetch heavy artifacts by reference.
-- **Profile-oriented evolution**: stable core semantics with extensible runtime profiles.
+- planner agent coordinating tools and UI entities in one governed session
+- approval-gated financial operation with explicit denial/approval evidence
+- provider/buyer service workflow with receipt verification and settlement confirmation
+- market-style resource allocation with event ordering and economic attestation
 
-## Adoption paths
+Runnable scenario set: [Examples](examples.md)
 
-Choose the path that matches your maturity:
+## 15-minute first value path
 
-### Path A: Quickstart
+1. Follow [Getting Started](getting-started.md) and run baseline example.
+2. Execute all scenario examples: `bash scripts/run_examples.sh`.
+3. Run quality gate: `bash scripts/quality_gate.sh`.
+4. Review [White Paper Alignment](whitepaper-alignment.md).
+5. Inspect API entry points in [API Reference](api.md).
 
-Use `fp.quickstart` helpers for immediate onboarding and local prototyping.
+## Engineering posture
 
-### Path B: Application Runtime
+FP runtime is designed with high signal-to-noise semantics:
 
-Use `FPServer` + `FPClient` to build controlled runtime services with explicit session/activity/event governance.
+- strict invariants over permissive ambiguity
+- compact, transport-safe data shapes
+- progressive disclosure and reference-oriented payloads
+- extension-friendly architecture without core semantic drift
 
-### Path C: Protocol/Transport Integration
-
-Use `fp.transport.http_jsonrpc.JSONRPCDispatcher` to expose FP methods through JSON-RPC APIs.
-
-## Build with token and latency discipline
-
-FP runtime encourages efficient execution:
-
-- compact event payloads
-- idempotent retry semantics
-- resumable stream consumption
-- token/cost metering hooks
-- reference-oriented result patterns (`result_ref`)
-
-## Current scope and maturity
+## Current maturity
 
 - Version: `0.1.0`
-- Runtime style: in-memory-first reference implementation
-- Recommended usage today: integration baseline, protocol validation, architecture backbone
-- Production trajectory: swap stores/transports/policy backends while keeping FP semantics stable
+- Runtime style: in-memory-first reference runtime
+- Documentation: MkDocs + API docs + runnable scenario coverage
+- CI: quality gate workflow + docs deployment workflow
 
-## Where to go next
+## Navigation
 
-1. **Start in 15 minutes**: [Getting Started](getting-started.md)
-2. **Understand architecture**: [Architecture](architecture.md)
-3. **Check white-paper alignment**: [White Paper Alignment](whitepaper-alignment.md)
-4. **Run practical scenarios**: [Examples](examples.md)
-5. **Review release checklist**: [Release Readiness](release-readiness.md)
-6. **Dive into API details**: [API Reference](api.md)
+- **Start now**: [Getting Started](getting-started.md)
+- **See architecture boundaries**: [Architecture](architecture.md)
+- **Validate white-paper intent**: [White Paper Alignment](whitepaper-alignment.md)
+- **Run real scenarios**: [Examples](examples.md)
+- **Check release checklist**: [Release Readiness](release-readiness.md)
+- **Browse full API surface**: [API Reference](api.md)
