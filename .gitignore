@@ -17,4 +17,4 @@ dist/
 *.egg-info/
 
 # Documentation build output
-site/
+/site/
