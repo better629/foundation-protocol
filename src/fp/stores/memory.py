@@ -35,6 +35,9 @@ class InMemoryEntityStore:
     def list(self) -> list[Entity]:
         return self._store.list()
 
+    def list_page(self, *, limit: int = 100, cursor: str | None = None) -> tuple[list[Entity], str | None]:
+        return self._store.list_page(limit=limit, cursor=cursor)
+
 
 class InMemoryOrganizationStore:
     def __init__(self) -> None:
@@ -48,6 +51,9 @@ class InMemoryOrganizationStore:
 
     def list(self) -> list[Organization]:
         return self._store.list()
+
+    def list_page(self, *, limit: int = 100, cursor: str | None = None) -> tuple[list[Organization], str | None]:
+        return self._store.list_page(limit=limit, cursor=cursor)
 
 
 class InMemoryMembershipStore:
@@ -66,6 +72,15 @@ class InMemoryMembershipStore:
     def by_organization(self, organization_id: str) -> list[Membership]:
         return self._store.by_group(organization_id)
 
+    def by_organization_page(
+        self,
+        organization_id: str,
+        *,
+        limit: int = 100,
+        cursor: str | None = None,
+    ) -> tuple[list[Membership], str | None]:
+        return self._store.by_group_page(organization_id, limit=limit, cursor=cursor)
+
 
 class InMemorySessionStore:
     def __init__(self) -> None:
@@ -80,10 +95,16 @@ class InMemorySessionStore:
     def list(self) -> list[Session]:
         return self._store.list()
 
+    def list_page(self, *, limit: int = 100, cursor: str | None = None) -> tuple[list[Session], str | None]:
+        return self._store.list_page(limit=limit, cursor=cursor)
+
 
 class InMemoryActivityStore:
     def __init__(self) -> None:
-        self._store = InMemoryKVStore[str, Activity](key_fn=lambda activity: activity.activity_id)
+        self._store = InMemoryGroupedKVStore[str, str, Activity](
+            key_fn=lambda activity: activity.activity_id,
+            group_fn=lambda activity: activity.session_id,
+        )
 
     def put(self, activity: Activity) -> None:
         self._store.put(activity)
@@ -92,10 +113,20 @@ class InMemoryActivityStore:
         return self._store.get(activity_id)
 
     def list(self, *, session_id: str | None = None) -> list[Activity]:
-        items = self._store.list()
         if session_id is None:
-            return items
-        return [activity for activity in items if activity.session_id == session_id]
+            return self._store.list()
+        return self._store.by_group(session_id)
+
+    def list_page(
+        self,
+        *,
+        session_id: str | None = None,
+        limit: int = 100,
+        cursor: str | None = None,
+    ) -> tuple[list[Activity], str | None]:
+        if session_id is None:
+            return self._store.list_page(limit=limit, cursor=cursor)
+        return self._store.by_group_page(session_id, limit=limit, cursor=cursor)
 
 
 class InMemoryEventStore:
@@ -137,6 +168,9 @@ class InMemoryReceiptStore:
     def list(self) -> list[Receipt]:
         return self._store.list()
 
+    def list_page(self, *, limit: int = 100, cursor: str | None = None) -> tuple[list[Receipt], str | None]:
+        return self._store.list_page(limit=limit, cursor=cursor)
+
 
 class InMemorySettlementStore:
     def __init__(self) -> None:
@@ -150,6 +184,9 @@ class InMemorySettlementStore:
 
     def list(self) -> list[Settlement]:
         return self._store.list()
+
+    def list_page(self, *, limit: int = 100, cursor: str | None = None) -> tuple[list[Settlement], str | None]:
+        return self._store.list_page(limit=limit, cursor=cursor)
 
 
 class InMemoryDisputeStore:
@@ -165,6 +202,9 @@ class InMemoryDisputeStore:
     def list(self) -> list[Dispute]:
         return self._store.list()
 
+    def list_page(self, *, limit: int = 100, cursor: str | None = None) -> tuple[list[Dispute], str | None]:
+        return self._store.list_page(limit=limit, cursor=cursor)
+
 
 class InMemoryProvenanceStore:
     def __init__(self) -> None:
@@ -175,6 +215,9 @@ class InMemoryProvenanceStore:
 
     def list(self) -> list[ProvenanceRecord]:
         return self._store.list()
+
+    def list_page(self, *, limit: int = 100, cursor: str | None = None) -> tuple[list[ProvenanceRecord], str | None]:
+        return self._store.list_page(limit=limit, cursor=cursor)
 
 
 class InMemoryStoreBundle:

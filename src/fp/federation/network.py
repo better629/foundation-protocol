@@ -3,15 +3,17 @@
 from __future__ import annotations
 
 import json
+import ssl
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from threading import RLock
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
-from uuid import uuid4
 
 from fp.protocol import FPError, FPErrorCode
+from fp.transport.client_http_jsonrpc import HTTPJSONRPCClientTransport
+from fp.transport.reliability import CircuitBreaker, RetryPolicy
 
 
 @dataclass(slots=True)
@@ -132,82 +134,42 @@ class InMemoryDirectory:
 class RemoteFPClient:
     """HTTP JSON-RPC client for remote FP servers."""
 
-    def __init__(self, rpc_url: str, *, timeout_seconds: float = 10.0, headers: dict[str, str] | None = None) -> None:
+    def __init__(
+        self,
+        rpc_url: str,
+        *,
+        timeout_seconds: float = 10.0,
+        headers: dict[str, str] | None = None,
+        ssl_context: ssl.SSLContext | None = None,
+        retry_policy: RetryPolicy | None = None,
+        circuit_breaker: CircuitBreaker | None = None,
+        keep_alive: bool = True,
+    ) -> None:
         if not rpc_url:
             raise FPError(FPErrorCode.INVALID_ARGUMENT, "rpc_url must be non-empty")
         self._rpc_url = rpc_url
-        self._timeout = timeout_seconds
-        self._headers = {"Content-Type": "application/json", **(headers or {})}
+        self._transport = HTTPJSONRPCClientTransport(
+            rpc_url,
+            timeout_seconds=timeout_seconds,
+            headers=headers,
+            ssl_context=ssl_context,
+            retry_policy=retry_policy,
+            circuit_breaker=circuit_breaker,
+            keep_alive=keep_alive,
+        )
 
     @property
     def rpc_url(self) -> str:
         return self._rpc_url
 
     def call(self, method: str, params: dict[str, Any] | None = None) -> Any:
-        request_id = f"req-{uuid4().hex}"
-        payload = {
-            "jsonrpc": "2.0",
-            "id": request_id,
-            "method": method,
-            "params": params or {},
-        }
-        raw = json.dumps(payload, separators=(",", ":")).encode("utf-8")
-        request = Request(self._rpc_url, data=raw, headers=self._headers, method="POST")
-        try:
-            with urlopen(request, timeout=self._timeout) as response:
-                response_body = response.read()
-        except HTTPError as exc:
-            detail = exc.read().decode("utf-8", errors="replace")
-            raise FPError(
-                FPErrorCode.INTERNAL_ERROR,
-                message="remote FP server returned HTTP error",
-                details={"status": exc.code, "url": self._rpc_url, "detail": detail},
-            ) from exc
-        except URLError as exc:
-            raise FPError(
-                FPErrorCode.INTERNAL_ERROR,
-                message="failed to reach remote FP server",
-                details={"url": self._rpc_url, "detail": str(exc.reason)},
-                retryable=True,
-            ) from exc
-
-        if not response_body:
-            return None
-        try:
-            decoded = json.loads(response_body.decode("utf-8"))
-        except json.JSONDecodeError as exc:
-            raise FPError(FPErrorCode.INTERNAL_ERROR, "remote FP server returned non-JSON response") from exc
-
-        if not isinstance(decoded, dict):
-            raise FPError(FPErrorCode.INTERNAL_ERROR, "remote FP server returned malformed response")
-        if "error" in decoded and isinstance(decoded["error"], dict):
-            raise self._map_remote_error(decoded["error"])
-        return decoded.get("result")
+        return self._transport.call(method, params or {})
 
     def ping(self) -> dict[str, Any]:
         result = self.call("fp/ping", {})
         if not isinstance(result, dict):
             raise FPError(FPErrorCode.INTERNAL_ERROR, "remote ping response is malformed")
         return result
-
-    @staticmethod
-    def _map_remote_error(error_payload: dict[str, Any]) -> FPError:
-        data = error_payload.get("data")
-        if isinstance(data, dict):
-            fp = data.get("fp")
-            if isinstance(fp, dict):
-                code_raw = fp.get("code")
-                if isinstance(code_raw, str) and code_raw in {code.value for code in FPErrorCode}:
-                    code = FPErrorCode(code_raw)
-                    message = fp.get("message")
-                    details = fp.get("details", {})
-                    retryable = bool(fp.get("retryable", False))
-                    return FPError(code=code, message=message, details=dict(details), retryable=retryable)
-        return FPError(
-            FPErrorCode.INTERNAL_ERROR,
-            message=error_payload.get("message", "remote call failed"),
-            details={"remote_error": error_payload},
-        )
 
 
 class NetworkResolver:

@@ -14,6 +14,9 @@ This repository provides a publish-ready Python reference runtime aligned to the
 - Fingerprinted idempotency protection for write retries
 - Practical JSON-RPC 2.0 dispatcher for FP method integration
 - Federated FP server publication/discovery + remote client connectivity
+- Transport reliability with retry/backoff/circuit-breaker + HTTP keep-alive reuse
+- Cursor pagination contracts across memory/sqlite stores and runtime listing APIs
+- Schema-first sync artifacts (`spec -> generated manifest`) with CI drift gate
 - Runnable scenario examples + smoke tests
 - MkDocs + mkdocstrings documentation site with GitHub Pages deployment
 
@@ -145,6 +148,18 @@ The quality gate runs:
 2. Example smoke tests
 3. Compile sanity checks
 4. Spec validation (`spec/fp-core.schema.json`, `spec/fp-openrpc.json`)
+5. Spec-sync drift check (`scripts/check_spec_sync.py`)
+
+## A+ hardening checkpoints
+
+- `FPClient` uses a single transport invocation path (no server bypass path)
+- `AsyncFPServer` public APIs have explicit named signatures
+- SQLite persistence uses JSON codec (no pickle serialization)
+- `RemoteFPClient` composes shared HTTP JSON-RPC transport logic
+- Paged listing semantics (`limit` + `cursor`) are available across runtime/store surfaces
+- Activity start orchestration is decomposed into dedicated orchestration steps
+- Remote transport has bounded retry/backoff/jitter/circuit-breaker
+- HTTP client supports keep-alive connection reuse for lower latency
 
 ## Documentation
 

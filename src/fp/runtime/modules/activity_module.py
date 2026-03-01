@@ -72,3 +72,20 @@ class ActivityModule:
         owner_entity_id: str | None = None,
     ) -> list[Activity]:
         return self.engine.list(session_id=session_id, state=state, owner_entity_id=owner_entity_id)
+
+    def list_page(
+        self,
+        *,
+        session_id: str | None = None,
+        state: ActivityState | None = None,
+        owner_entity_id: str | None = None,
+        limit: int = 100,
+        cursor: str | None = None,
+    ) -> tuple[list[Activity], str | None]:
+        return self.engine.list_page(
+            session_id=session_id,
+            state=state,
+            owner_entity_id=owner_entity_id,
+            limit=limit,
+            cursor=cursor,
+        )

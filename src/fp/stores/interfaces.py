@@ -25,6 +25,8 @@ class EntityStore(Protocol):
 
     def list(self) -> list[Entity]: ...
 
+    def list_page(self, *, limit: int = 100, cursor: str | None = None) -> tuple[list[Entity], str | None]: ...
+
 
 class OrganizationStore(Protocol):
     def put(self, organization: Organization) -> None: ...
@@ -32,6 +34,8 @@ class OrganizationStore(Protocol):
     def get(self, organization_id: str) -> Organization | None: ...
 
     def list(self) -> list[Organization]: ...
+
+    def list_page(self, *, limit: int = 100, cursor: str | None = None) -> tuple[list[Organization], str | None]: ...
 
 
 class MembershipStore(Protocol):
@@ -41,6 +45,14 @@ class MembershipStore(Protocol):
 
     def by_organization(self, organization_id: str) -> list[Membership]: ...
 
+    def by_organization_page(
+        self,
+        organization_id: str,
+        *,
+        limit: int = 100,
+        cursor: str | None = None,
+    ) -> tuple[list[Membership], str | None]: ...
+
 
 class SessionStore(Protocol):
     def put(self, session: Session) -> None: ...
@@ -49,6 +61,8 @@ class SessionStore(Protocol):
 
     def list(self) -> list[Session]: ...
 
+    def list_page(self, *, limit: int = 100, cursor: str | None = None) -> tuple[list[Session], str | None]: ...
+
 
 class ActivityStore(Protocol):
     def put(self, activity: Activity) -> None: ...
@@ -56,6 +70,14 @@ class ActivityStore(Protocol):
     def get(self, activity_id: str) -> Activity | None: ...
 
     def list(self, *, session_id: str | None = None) -> list[Activity]: ...
+
+    def list_page(
+        self,
+        *,
+        session_id: str | None = None,
+        limit: int = 100,
+        cursor: str | None = None,
+    ) -> tuple[list[Activity], str | None]: ...
 
 
 class EventStore(Protocol):
@@ -77,6 +99,8 @@ class ReceiptStore(Protocol):
 
     def list(self) -> list[Receipt]: ...
 
+    def list_page(self, *, limit: int = 100, cursor: str | None = None) -> tuple[list[Receipt], str | None]: ...
+
 
 class SettlementStore(Protocol):
     def put(self, settlement: Settlement) -> None: ...
@@ -84,6 +108,8 @@ class SettlementStore(Protocol):
     def get(self, settlement_id: str) -> Settlement | None: ...
 
     def list(self) -> list[Settlement]: ...
+
+    def list_page(self, *, limit: int = 100, cursor: str | None = None) -> tuple[list[Settlement], str | None]: ...
 
 
 class DisputeStore(Protocol):
@@ -93,8 +119,12 @@ class DisputeStore(Protocol):
 
     def list(self) -> list[Dispute]: ...
 
+    def list_page(self, *, limit: int = 100, cursor: str | None = None) -> tuple[list[Dispute], str | None]: ...
+
 
 class ProvenanceStore(Protocol):
     def put(self, record: ProvenanceRecord) -> None: ...
 
     def list(self) -> list[ProvenanceRecord]: ...
+
+    def list_page(self, *, limit: int = 100, cursor: str | None = None) -> tuple[list[ProvenanceRecord], str | None]: ...

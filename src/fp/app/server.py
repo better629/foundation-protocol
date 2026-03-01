@@ -30,9 +30,11 @@ from fp.protocol import (
     SessionState,
     Settlement,
 )
-from fp.runtime import ContextCompactor, DispatchContext, build_runtime_bundle
+from fp.runtime import ContextCompactor, build_runtime_bundle
 from fp.runtime.modules import GovernanceModule
 from fp.stores.memory import InMemoryStoreBundle
+
+from .activity_orchestrator import ActivityStartOrchestrator, ActivityStartRequest
 
 
 def _new_id(prefix: str) -> str:
@@ -92,6 +94,7 @@ class FPServer:
             policy_engine=self.policy_engine,
             provenance_recorder=self.provenance_record,
         )
+        self._activity_orchestrator = ActivityStartOrchestrator(self)
 
     # -------- Handshake --------
 
@@ -134,6 +137,13 @@ class FPServer:
     def search_entities(self, *, query: str, kind: EntityKind | None = None, limit: int = 50) -> list[Entity]:
         return self.entities.search(query=query, kind=kind.value if kind else None, limit=limit)
 
+    def entities_list(self) -> list[Entity]:
+        return self.stores.entities.list()
+
+    def entities_list_page(self, *, limit: int = 100, cursor: str | None = None) -> dict[str, Any]:
+        items, next_cursor = self.stores.entities.list_page(limit=limit, cursor=cursor)
+        return {"items": items, "next_cursor": next_cursor}
+
     def create_organization(self, organization: Organization) -> Organization:
         out = self.organizations.create(organization)
         self.metrics.inc("organizations.create")
@@ -141,6 +151,30 @@ class FPServer:
 
     def get_organization(self, organization_id: str) -> Organization:
         return self.organizations.get(organization_id)
+
+    def organizations_list(self) -> list[Organization]:
+        return self.stores.organizations.list()
+
+    def organizations_list_page(self, *, limit: int = 100, cursor: str | None = None) -> dict[str, Any]:
+        items, next_cursor = self.stores.organizations.list_page(limit=limit, cursor=cursor)
+        return {"items": items, "next_cursor": next_cursor}
+
+    def memberships_list(self, *, organization_id: str) -> list[Membership]:
+        return self.stores.memberships.by_organization(organization_id)
+
+    def memberships_list_page(
+        self,
+        *,
+        organization_id: str,
+        limit: int = 100,
+        cursor: str | None = None,
+    ) -> dict[str, Any]:
+        items, next_cursor = self.stores.memberships.by_organization_page(
+            organization_id,
+            limit=limit,
+            cursor=cursor,
+        )
+        return {"items": items, "next_cursor": next_cursor}
 
     def add_membership(self, membership: Membership, *, actor_entity_id: str | None = None) -> Membership:
         self._enforce_policy(
@@ -290,6 +324,13 @@ class FPServer:
     def sessions_get(self, session_id: str) -> Session:
         return self.sessions.get(session_id)
 
+    def sessions_list(self) -> list[Session]:
+        return self.sessions.list()
+
+    def sessions_list_page(self, *, limit: int = 100, cursor: str | None = None) -> dict[str, Any]:
+        items, next_cursor = self.sessions.list_page(limit=limit, cursor=cursor)
+        return {"items": items, "next_cursor": next_cursor}
+
     # -------- Activity --------
 
     def register_operation(self, name: str, handler: Callable[[dict[str, Any]], Any]) -> None:
@@ -313,122 +354,17 @@ class FPServer:
         idempotency_key: str | None = None,
         auto_execute: bool = True,
     ) -> Activity:
-        self._require_entity(owner_entity_id)
-        self._require_entity(initiator_entity_id)
-        session = self.sessions.get(session_id)
-        if session.state is not SessionState.ACTIVE:
-            raise FPError(
-                FPErrorCode.INVALID_STATE_TRANSITION,
-                message=f"cannot start activity in session state: {session.state.value}",
-            )
-        if owner_entity_id not in session.participants:
-            raise FPError(
-                FPErrorCode.AUTHZ_DENIED,
-                message="activity owner must be a session participant",
-                details={"session_id": session_id, "owner_entity_id": owner_entity_id},
-            )
-        if initiator_entity_id not in session.participants:
-            raise FPError(
-                FPErrorCode.AUTHZ_DENIED,
-                message="activity initiator must be a session participant",
-                details={"session_id": session_id, "initiator_entity_id": initiator_entity_id},
-            )
-        self._enforce_token_budget(session=session, operation=operation, input_payload=input_payload)
-
-        request_fingerprint = self._idempotency_fingerprint(
+        request = ActivityStartRequest(
             session_id=session_id,
             owner_entity_id=owner_entity_id,
             initiator_entity_id=initiator_entity_id,
             operation=operation,
             input_payload=input_payload,
-        )
-        if idempotency_key:
-            cached = self.idempotency.check(idempotency_key, fingerprint=request_fingerprint)
-            if cached is not None:
-                value = cached.value
-                if isinstance(value, Activity):
-                    return value
-
-        self._enforce_policy(
-            hook=PolicyHook.PRE_INVOKE,
-            actor_entity_id=initiator_entity_id,
-            session_id=session_id,
-            operation=operation,
-            payload=input_payload,
-        )
-
-        activity = self.activities.start(
             activity_id=activity_id or _new_id("act"),
-            session_id=session_id,
-            owner_entity_id=owner_entity_id,
-            initiator_entity_id=initiator_entity_id,
-            operation=operation,
-            input_payload=input_payload,
+            idempotency_key=idempotency_key,
+            auto_execute=auto_execute,
         )
-        self._emit_event(
-            event_type="activity.submitted",
-            session_id=session_id,
-            activity_id=activity.activity_id,
-            producer_entity_id=initiator_entity_id,
-            payload={"operation": operation},
-        )
-
-        if auto_execute and self.dispatch.has_handler(operation):
-            activity = self.activities.transition(activity.activity_id, next_state=ActivityState.WORKING)
-            self._emit_event(
-                event_type="activity.working",
-                session_id=session_id,
-                activity_id=activity.activity_id,
-                producer_entity_id=owner_entity_id,
-                payload={"operation": operation},
-            )
-            ctx = DispatchContext(
-                session_id=session_id,
-                activity_id=activity.activity_id,
-                operation=operation,
-                actor_entity_id=initiator_entity_id,
-            )
-            try:
-                output = self.dispatch.execute(context=ctx, input_payload=input_payload)
-            except Exception as exc:  # pragma: no cover - defensive path
-                activity = self.activities.fail(activity.activity_id, message=str(exc))
-                self._emit_event(
-                    event_type="activity.failed",
-                    session_id=session_id,
-                    activity_id=activity.activity_id,
-                    producer_entity_id=owner_entity_id,
-                    payload={"error": str(exc)},
-                )
-            else:
-                if not (isinstance(output, dict) and output.get("state") == "working"):
-                    result_payload = output if isinstance(output, dict) else {"value": output}
-                    compacted = self._context_compactor.compact(result_payload)
-                    activity = self.activities.complete(
-                        activity.activity_id,
-                        result_payload=compacted.inline_payload,
-                        result_ref=compacted.result_ref,
-                    )
-                    usage = self.token_meter.measure(
-                        input_payload=input_payload,
-                        output_payload=compacted.inline_payload or {},
-                    )
-                    estimated_cost = self.cost_meter.estimate(usage)
-                    self._emit_event(
-                        event_type="activity.completed",
-                        session_id=session_id,
-                        activity_id=activity.activity_id,
-                        producer_entity_id=owner_entity_id,
-                        payload={
-                            "usage": asdict(usage),
-                            "estimated_cost": round(estimated_cost, 8),
-                            "result_ref": compacted.result_ref,
-                            "compacted": compacted.compacted,
-                        },
-                    )
-
-        if idempotency_key:
-            self.idempotency.store(idempotency_key, activity, fingerprint=request_fingerprint)
-        return activity
+        return self._activity_orchestrator.start(request)
 
     def activities_update(
         self,
@@ -505,6 +441,24 @@ class FPServer:
         owner_entity_id: str | None = None,
     ) -> list[Activity]:
         return self.activities.list(session_id=session_id, state=state, owner_entity_id=owner_entity_id)
+
+    def activities_list_page(
+        self,
+        *,
+        session_id: str | None = None,
+        state: ActivityState | None = None,
+        owner_entity_id: str | None = None,
+        limit: int = 100,
+        cursor: str | None = None,
+    ) -> dict[str, Any]:
+        items, next_cursor = self.activities.list_page(
+            session_id=session_id,
+            state=state,
+            owner_entity_id=owner_entity_id,
+            limit=limit,
+            cursor=cursor,
+        )
+        return {"items": items, "next_cursor": next_cursor}
 
     # -------- Event streams --------
 
@@ -675,14 +629,30 @@ class FPServer:
     def provenance_list(self) -> list[ProvenanceRecord]:
         return self.stores.provenance.list()
 
+    def provenance_list_page(self, *, limit: int = 100, cursor: str | None = None) -> dict[str, Any]:
+        items, next_cursor = self.stores.provenance.list_page(limit=limit, cursor=cursor)
+        return {"items": items, "next_cursor": next_cursor}
+
     def receipts_list(self) -> list:
         return self.stores.receipts.list()
+
+    def receipts_list_page(self, *, limit: int = 100, cursor: str | None = None) -> dict[str, Any]:
+        items, next_cursor = self.stores.receipts.list_page(limit=limit, cursor=cursor)
+        return {"items": items, "next_cursor": next_cursor}
 
     def settlements_list(self) -> list:
         return self.stores.settlements.list()
 
+    def settlements_list_page(self, *, limit: int = 100, cursor: str | None = None) -> dict[str, Any]:
+        items, next_cursor = self.stores.settlements.list_page(limit=limit, cursor=cursor)
+        return {"items": items, "next_cursor": next_cursor}
+
     def disputes_list(self) -> list:
         return self.stores.disputes.list()
+
+    def disputes_list_page(self, *, limit: int = 100, cursor: str | None = None) -> dict[str, Any]:
+        items, next_cursor = self.stores.disputes.list_page(limit=limit, cursor=cursor)
+        return {"items": items, "next_cursor": next_cursor}
 
     def audit_bundle(self, *, session_id: str) -> dict[str, Any]:
         events = self.stores.events.replay_from(f"{session_id}:*", None, limit=10_000)

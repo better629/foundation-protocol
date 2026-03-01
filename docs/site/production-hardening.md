@@ -23,6 +23,25 @@ This page summarizes the hardening layer added on top of the FP reference runtim
 - well-known server card endpoint (`/.well-known/fp-server.json`)
 - directory-based discovery and entity->server resolution
 - remote FP client with structured FP error mapping
+- transport-level retry/backoff/jitter and circuit-breaker controls
+- HTTP keep-alive connection reuse for lower request overhead
+
+### Data and API hardening
+
+- `FPClient` is transport-only (single invocation path)
+- SQLite store serialization uses JSON codec (no pickle)
+- shared HTTP transport reused by federation remote client (no duplicate logic)
+- list APIs support deterministic cursor pagination (`limit` + `cursor`)
+- activities are indexed by `session_id` for scalable session-scoped listing
+- activity start path extracted to dedicated orchestrator with step-level tests
+
+### Spec integrity pipeline
+
+- deterministic schema-sync manifest generated from `spec/fp-core.schema.json` and `spec/fp-openrpc.json`
+- CI fails on schema/model artifact drift
+- local commands:
+  - `python scripts/generate_models_from_spec.py`
+  - `python scripts/check_spec_sync.py`
 
 ## Non-toy scenario coverage
 

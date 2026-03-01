@@ -8,6 +8,7 @@ Use this checklist before tagging a release intended to accompany the white pape
 - Section 3 scenario tests pass
 - Example smoke tests pass
 - Spec artifacts validate against OpenRPC/JSON Schema checks
+- Spec-sync drift check passes
 
 ## Engineering readiness
 
@@ -15,6 +16,8 @@ Use this checklist before tagging a release intended to accompany the white pape
 - Deterministic schema hashing and stable idempotency semantics
 - Session/activity/event invariants enforced with explicit errors
 - JSON-RPC transport path validates request shape and error mapping
+- Remote transport reliability is enabled (retry/backoff/circuit-breaker)
+- Pagination contracts (`limit` + `cursor`) are stable across memory/sqlite/runtime APIs
 
 ## Documentation readiness
 
@@ -26,6 +29,7 @@ Use this checklist before tagging a release intended to accompany the white pape
 ## Required commands
 
 ```bash
+python scripts/check_spec_sync.py
 bash scripts/quality_gate.sh
 bash scripts/build_docs.sh
 ```

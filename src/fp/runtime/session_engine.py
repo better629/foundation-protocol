@@ -158,3 +158,6 @@ class SessionEngine:
 
     def list(self) -> list[Session]:
         return self._store.list()
+
+    def list_page(self, *, limit: int = 100, cursor: str | None = None) -> tuple[list[Session], str | None]:
+        return self._store.list_page(limit=limit, cursor=cursor)

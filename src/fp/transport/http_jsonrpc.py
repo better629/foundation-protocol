@@ -314,11 +314,27 @@ class JSONRPCDispatcher:
                 kind=_kind_or_none(p.get("kind")),
                 limit=int(p.get("limit", 50)),
             ),
+            "fp/entities.list": lambda p: server.entities_list(),
+            "fp/entities.listPage": lambda p: server.entities_list_page(
+                limit=int(p.get("limit", 100)),
+                cursor=p.get("cursor"),
+            ),
             "fp/orgs.create": lambda p: server.create_organization(_parse_organization(p["organization"])),
             "fp/orgs.get": lambda p: server.get_organization(p["organization_id"]),
+            "fp/orgs.list": lambda p: server.organizations_list(),
+            "fp/orgs.listPage": lambda p: server.organizations_list_page(
+                limit=int(p.get("limit", 100)),
+                cursor=p.get("cursor"),
+            ),
             "fp/orgs.members.add": lambda p: server.add_membership(
                 _parse_membership({**p["membership"], "organization_id": p["organization_id"]}),
                 actor_entity_id=p.get("actor_entity_id"),
+            ),
+            "fp/orgs.members.list": lambda p: server.memberships_list(organization_id=p["organization_id"]),
+            "fp/orgs.members.listPage": lambda p: server.memberships_list_page(
+                organization_id=p["organization_id"],
+                limit=int(p.get("limit", 100)),
+                cursor=p.get("cursor"),
             ),
             "fp/orgs.members.remove": lambda p: server.remove_membership(
                 organization_id=p["organization_id"],
@@ -359,6 +375,11 @@ class JSONRPCDispatcher:
             "fp/sessions.leave": lambda p: server.sessions_leave(session_id=p["session_id"], entity_id=p["entity_id"]),
             "fp/sessions.close": lambda p: server.sessions_close(session_id=p["session_id"], reason=p.get("reason")),
             "fp/sessions.get": lambda p: server.sessions_get(p["session_id"]),
+            "fp/sessions.list": lambda p: server.sessions_list(),
+            "fp/sessions.listPage": lambda p: server.sessions_list_page(
+                limit=int(p.get("limit", 100)),
+                cursor=p.get("cursor"),
+            ),
             "fp/activities.start": lambda p: server.activities_start(
                 session_id=p["session_id"],
                 owner_entity_id=p["owner_entity_id"],
@@ -384,6 +405,13 @@ class JSONRPCDispatcher:
                 state=ActivityState(p["state"]) if p.get("state") else None,
                 owner_entity_id=p.get("owner_entity_id"),
             ),
+            "fp/activities.listPage": lambda p: server.activities_list_page(
+                session_id=p.get("session_id"),
+                state=ActivityState(p["state"]) if p.get("state") else None,
+                owner_entity_id=p.get("owner_entity_id"),
+                limit=int(p.get("limit", 100)),
+                cursor=p.get("cursor"),
+            ),
             "fp/events.stream": lambda p: server.events_stream(
                 session_id=p["session_id"],
                 activity_id=p.get("activity_id"),
@@ -405,6 +433,26 @@ class JSONRPCDispatcher:
                 activity_id=p.get("activity_id"),
             ),
             "fp/events.pushConfig.delete": lambda p: server.push_config_delete(p["push_config_id"]),
+            "fp/receipts.list": lambda p: server.receipts_list(),
+            "fp/receipts.listPage": lambda p: server.receipts_list_page(
+                limit=int(p.get("limit", 100)),
+                cursor=p.get("cursor"),
+            ),
+            "fp/settlements.list": lambda p: server.settlements_list(),
+            "fp/settlements.listPage": lambda p: server.settlements_list_page(
+                limit=int(p.get("limit", 100)),
+                cursor=p.get("cursor"),
+            ),
+            "fp/disputes.list": lambda p: server.disputes_list(),
+            "fp/disputes.listPage": lambda p: server.disputes_list_page(
+                limit=int(p.get("limit", 100)),
+                cursor=p.get("cursor"),
+            ),
+            "fp/provenance.list": lambda p: server.provenance_list(),
+            "fp/provenance.listPage": lambda p: server.provenance_list_page(
+                limit=int(p.get("limit", 100)),
+                cursor=p.get("cursor"),
+            ),
         }
         return cls(method_table=method_table)
 

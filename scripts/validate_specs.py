@@ -307,7 +307,52 @@ def _parse_args() -> argparse.Namespace:
         default="docs/foundation-protocol-spec-draft.md",
         help="Path to fp draft markdown document for method alignment checks",
     )
+    parser.add_argument(
+        "--generated-py",
+        default="src/fp/protocol/spec_manifest.py",
+        help="Path to generated schema-sync Python module",
+    )
+    parser.add_argument(
+        "--manifest-json",
+        default="spec/.generated/spec-sync-manifest.json",
+        help="Path to generated schema-sync JSON manifest",
+    )
+    parser.add_argument(
+        "--skip-spec-sync-check",
+        action="store_true",
+        help="Skip generated schema-sync artifact drift check",
+    )
     return parser.parse_args()
+
+
+def _validate_spec_sync(
+    *,
+    core_path: Path,
+    openrpc_path: Path,
+    generated_py_path: Path,
+    manifest_json_path: Path,
+    errors: list[str],
+) -> None:
+    scripts_dir = Path(__file__).resolve().parent
+    if str(scripts_dir) not in sys.path:
+        sys.path.insert(0, str(scripts_dir))
+
+    try:
+        from check_spec_sync import check_sync  # type: ignore[import-not-found]
+    except Exception as exc:  # pragma: no cover - defensive path
+        errors.append(f"failed to import spec sync checker: {exc}")
+        return
+
+    ok, messages = check_sync(
+        core_path=core_path,
+        openrpc_path=openrpc_path,
+        generated_py_path=generated_py_path,
+        manifest_json_path=manifest_json_path,
+    )
+    if ok:
+        return
+    for message in messages:
+        errors.append(f"spec-sync: {message}")
 
 
 def main() -> int:
@@ -315,6 +360,8 @@ def main() -> int:
     core_path = Path(args.core).resolve()
     openrpc_path = Path(args.openrpc).resolve()
     draft_path = Path(args.draft).resolve()
+    generated_py_path = Path(args.generated_py).resolve()
+    manifest_json_path = Path(args.manifest_json).resolve()
 
     errors: list[str] = []
     warnings: list[str] = []
@@ -349,6 +396,14 @@ def main() -> int:
         if isinstance(method, dict) and isinstance(method.get("name"), str)
     }
     _validate_draft_alignment(draft_path, openrpc_method_names, errors, warnings)
+    if not args.skip_spec_sync_check:
+        _validate_spec_sync(
+            core_path=core_path,
+            openrpc_path=openrpc_path,
+            generated_py_path=generated_py_path,
+            manifest_json_path=manifest_json_path,
+            errors=errors,
+        )
 
     for msg in warnings:
         print(f"WARN: {msg}")

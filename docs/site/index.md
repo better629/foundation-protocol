@@ -74,6 +74,43 @@ The diagram shows FP as a **federated control plane**:
 
 This keeps inter-entity coordination simple without sacrificing policy, auditability, or settlement semantics.
 
+## Home architecture (ASCII)
+
+```text
+                    +---------------------------+
+                    |       FP Directory        |
+                    |  cards / ttl / health    |
+                    +------------+--------------+
+                                 |
+          discover(entity_id)    |
+                                 v
+ +-----------------------+   +-----------------------+
+ |   Entity Runtime A    |   |   Entity Runtime B    |
+ |-----------------------|   |-----------------------|
+ | FPServer + Modules    |<->| FPServer + Modules    |
+ | graph/session/activity|   | graph/session/activity|
+ | policy/provenance     |   | policy/provenance     |
+ | economy pipeline      |   | economy pipeline      |
+ +-----------+-----------+   +-----------+-----------+
+             |                           |
+             +------ JSON-RPC/HTTP ------+
+                        (keep-alive,
+                    retry, circuit-breaker)
+```
+
+Runtime module composition:
+
+```text
+FPServer (facade)
+  -> GraphModule
+  -> SessionModule
+  -> ActivityModule (ActivityStartOrchestrator)
+  -> EventModule
+  -> EconomyModule
+  -> GovernanceModule
+  -> Stores (memory/sqlite) + Transport (inproc/http)
+```
+
 ## What FP gives each stakeholder
 
 | Role | Immediate value |

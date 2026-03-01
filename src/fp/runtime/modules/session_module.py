@@ -60,3 +60,6 @@ class SessionModule:
 
     def list(self) -> list[Session]:
         return self.engine.list()
+
+    def list_page(self, *, limit: int = 100, cursor: str | None = None) -> tuple[list[Session], str | None]:
+        return self.engine.list_page(limit=limit, cursor=cursor)

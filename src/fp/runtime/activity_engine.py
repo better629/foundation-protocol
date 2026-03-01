@@ -124,3 +124,39 @@ class ActivityEngine:
         if owner_entity_id is not None:
             activities = [activity for activity in activities if activity.owner_entity_id == owner_entity_id]
         return activities
+
+    def list_page(
+        self,
+        *,
+        session_id: str | None = None,
+        state: ActivityState | None = None,
+        owner_entity_id: str | None = None,
+        limit: int = 100,
+        cursor: str | None = None,
+    ) -> tuple[list[Activity], str | None]:
+        if limit <= 0:
+            raise FPError(FPErrorCode.INVALID_ARGUMENT, "activities page limit must be > 0")
+
+        if state is None and owner_entity_id is None:
+            return self._store.list_page(session_id=session_id, limit=limit, cursor=cursor)
+
+        page: list[Activity] = []
+        page_cursor = cursor
+        while len(page) < limit:
+            chunk, next_cursor = self._store.list_page(session_id=session_id, limit=limit, cursor=page_cursor)
+            if not chunk:
+                break
+            for idx, activity in enumerate(chunk):
+                if state is not None and activity.state is not state:
+                    continue
+                if owner_entity_id is not None and activity.owner_entity_id != owner_entity_id:
+                    continue
+                page.append(activity)
+                if len(page) >= limit:
+                    if idx < len(chunk) - 1 or next_cursor is not None:
+                        return page, page[-1].activity_id
+                    return page, None
+            if next_cursor is None:
+                break
+            page_cursor = next_cursor
+        return page, None

@@ -32,6 +32,26 @@ class InMemoryKVStore(Generic[K, V]):
         with self._lock:
             return [deepcopy(value) for value in self._items.values()]
 
+    def list_page(self, *, limit: int = 100, cursor: str | None = None) -> tuple[list[V], str | None]:
+        if limit <= 0:
+            raise ValueError("limit must be > 0")
+        with self._lock:
+            keys = sorted(self._items.keys(), key=lambda item: str(item))
+            if cursor is None:
+                start = 0
+            else:
+                start = 0
+                for index, key in enumerate(keys):
+                    if str(key) > cursor:
+                        start = index
+                        break
+                else:
+                    return [], None
+            page_keys = keys[start : start + limit + 1]
+            values = [deepcopy(self._items[key]) for key in page_keys[:limit]]
+            next_cursor = str(page_keys[limit - 1]) if len(page_keys) > limit else None
+            return values, next_cursor
+
     def remove(self, key: K) -> V | None:
         with self._lock:
             value = self._items.pop(key, None)
@@ -67,10 +87,50 @@ class InMemoryGroupedKVStore(Generic[K, G, V]):
         with self._lock:
             return [deepcopy(value) for value in self._items.values()]
 
+    def list_page(self, *, limit: int = 100, cursor: str | None = None) -> tuple[list[V], str | None]:
+        if limit <= 0:
+            raise ValueError("limit must be > 0")
+        with self._lock:
+            keys = sorted(self._items.keys(), key=lambda item: str(item))
+            if cursor is None:
+                start = 0
+            else:
+                start = 0
+                for index, key in enumerate(keys):
+                    if str(key) > cursor:
+                        start = index
+                        break
+                else:
+                    return [], None
+            page_keys = keys[start : start + limit + 1]
+            values = [deepcopy(self._items[key]) for key in page_keys[:limit] if key in self._items]
+            next_cursor = str(page_keys[limit - 1]) if len(page_keys) > limit else None
+            return values, next_cursor
+
     def by_group(self, group: G) -> list[V]:
         with self._lock:
             keys = sorted(self._groups.get(group, set()), key=lambda item: str(item))
             return [deepcopy(self._items[key]) for key in keys if key in self._items]
+
+    def by_group_page(self, group: G, *, limit: int = 100, cursor: str | None = None) -> tuple[list[V], str | None]:
+        if limit <= 0:
+            raise ValueError("limit must be > 0")
+        with self._lock:
+            keys = sorted(self._groups.get(group, set()), key=lambda item: str(item))
+            if cursor is None:
+                start = 0
+            else:
+                start = 0
+                for index, key in enumerate(keys):
+                    if str(key) > cursor:
+                        start = index
+                        break
+                else:
+                    return [], None
+            page_keys = keys[start : start + limit + 1]
+            values = [deepcopy(self._items[key]) for key in page_keys[:limit] if key in self._items]
+            next_cursor = str(page_keys[limit - 1]) if len(page_keys) > limit else None
+            return values, next_cursor
 
     def remove(self, key: K) -> V | None:
         with self._lock:
