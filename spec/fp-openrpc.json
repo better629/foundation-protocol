@@ -1,0 +1,1304 @@
+{
+  "openrpc": "1.3.2",
+  "info": {
+    "title": "Foundation Protocol (FP) RPC API",
+    "version": "0.1.0",
+    "description": "Machine-readable OpenRPC definition for Foundation Protocol v0.1 core methods."
+  },
+  "servers": [
+    {
+      "name": "default",
+      "url": "https://fp-gateway.example.com/rpc"
+    }
+  ],
+  "methods": [
+    {
+      "name": "fp/initialize",
+      "summary": "Negotiates protocol version, capabilities, and profiles.",
+      "params": [
+        {
+          "name": "params",
+          "required": true,
+          "schema": {
+            "$ref": "#/components/schemas/InitializeParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/InitializeResult"
+        }
+      }
+    },
+    {
+      "name": "fp/initialized",
+      "summary": "Initialization completion notification.",
+      "x-notification": true,
+      "params": [
+        {
+          "name": "params",
+          "required": true,
+          "schema": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "negotiatedVersion": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "negotiatedVersion"
+            ]
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/EmptyResult"
+        }
+      }
+    },
+    {
+      "name": "fp/ping",
+      "summary": "Liveness check.",
+      "params": [
+        {
+          "name": "params",
+          "required": false,
+          "schema": {
+            "type": "object"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/EmptyResult"
+        }
+      }
+    },
+    {
+      "name": "fp/entities.get",
+      "summary": "Get an entity by ID.",
+      "params": [
+        {
+          "name": "params",
+          "required": true,
+          "schema": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "entityId": {
+                "$ref": "./fp-core.schema.json#/$defs/Identifier"
+              }
+            },
+            "required": [
+              "entityId"
+            ]
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "./fp-core.schema.json#/$defs/Entity"
+        }
+      }
+    },
+    {
+      "name": "fp/entities.search",
+      "summary": "Search entities by query and optional kind filter.",
+      "params": [
+        {
+          "name": "params",
+          "required": true,
+          "schema": {
+            "$ref": "#/components/schemas/EntitySearchParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/EntitySearchResult"
+        }
+      }
+    },
+    {
+      "name": "fp/orgs.create",
+      "summary": "Create an organization entity with governance config.",
+      "params": [
+        {
+          "name": "params",
+          "required": true,
+          "schema": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "organization": {
+                "$ref": "./fp-core.schema.json#/$defs/Organization"
+              }
+            },
+            "required": [
+              "organization"
+            ]
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "./fp-core.schema.json#/$defs/Organization"
+        }
+      }
+    },
+    {
+      "name": "fp/orgs.get",
+      "summary": "Get an organization by ID.",
+      "params": [
+        {
+          "name": "params",
+          "required": true,
+          "schema": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "organizationId": {
+                "$ref": "./fp-core.schema.json#/$defs/Identifier"
+              }
+            },
+            "required": [
+              "organizationId"
+            ]
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "./fp-core.schema.json#/$defs/Organization"
+        }
+      }
+    },
+    {
+      "name": "fp/orgs.members.add",
+      "summary": "Add membership to an organization.",
+      "params": [
+        {
+          "name": "params",
+          "required": true,
+          "schema": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "organizationId": {
+                "$ref": "./fp-core.schema.json#/$defs/Identifier"
+              },
+              "membership": {
+                "$ref": "./fp-core.schema.json#/$defs/Membership"
+              }
+            },
+            "required": [
+              "organizationId",
+              "membership"
+            ]
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "./fp-core.schema.json#/$defs/Membership"
+        }
+      }
+    },
+    {
+      "name": "fp/orgs.members.remove",
+      "summary": "Remove membership from an organization.",
+      "params": [
+        {
+          "name": "params",
+          "required": true,
+          "schema": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "organizationId": {
+                "$ref": "./fp-core.schema.json#/$defs/Identifier"
+              },
+              "membershipId": {
+                "$ref": "./fp-core.schema.json#/$defs/Identifier"
+              }
+            },
+            "required": [
+              "organizationId",
+              "membershipId"
+            ]
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/EmptyResult"
+        }
+      }
+    },
+    {
+      "name": "fp/orgs.roles.grant",
+      "summary": "Grant roles to an organization member.",
+      "params": [
+        {
+          "name": "params",
+          "required": true,
+          "schema": {
+            "$ref": "#/components/schemas/RoleUpdateParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "./fp-core.schema.json#/$defs/Membership"
+        }
+      }
+    },
+    {
+      "name": "fp/orgs.roles.revoke",
+      "summary": "Revoke roles from an organization member.",
+      "params": [
+        {
+          "name": "params",
+          "required": true,
+          "schema": {
+            "$ref": "#/components/schemas/RoleUpdateParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "./fp-core.schema.json#/$defs/Membership"
+        }
+      }
+    },
+    {
+      "name": "fp/sessions.create",
+      "summary": "Create a multi-party session.",
+      "params": [
+        {
+          "name": "params",
+          "required": true,
+          "schema": {
+            "$ref": "#/components/schemas/SessionCreateParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "./fp-core.schema.json#/$defs/Session"
+        }
+      }
+    },
+    {
+      "name": "fp/sessions.join",
+      "summary": "Join an existing session.",
+      "params": [
+        {
+          "name": "params",
+          "required": true,
+          "schema": {
+            "$ref": "#/components/schemas/SessionJoinParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "./fp-core.schema.json#/$defs/Session"
+        }
+      }
+    },
+    {
+      "name": "fp/sessions.update",
+      "summary": "Update session metadata, roles, policy, or budget.",
+      "params": [
+        {
+          "name": "params",
+          "required": true,
+          "schema": {
+            "$ref": "#/components/schemas/SessionUpdateParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "./fp-core.schema.json#/$defs/Session"
+        }
+      }
+    },
+    {
+      "name": "fp/sessions.leave",
+      "summary": "Leave session as participant.",
+      "params": [
+        {
+          "name": "params",
+          "required": true,
+          "schema": {
+            "$ref": "#/components/schemas/SessionLeaveParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/EmptyResult"
+        }
+      }
+    },
+    {
+      "name": "fp/sessions.close",
+      "summary": "Close a session.",
+      "params": [
+        {
+          "name": "params",
+          "required": true,
+          "schema": {
+            "$ref": "#/components/schemas/SessionCloseParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "./fp-core.schema.json#/$defs/Session"
+        }
+      }
+    },
+    {
+      "name": "fp/sessions.get",
+      "summary": "Get session by ID.",
+      "params": [
+        {
+          "name": "params",
+          "required": true,
+          "schema": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "sessionId": {
+                "$ref": "./fp-core.schema.json#/$defs/Identifier"
+              }
+            },
+            "required": [
+              "sessionId"
+            ]
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "./fp-core.schema.json#/$defs/Session"
+        }
+      }
+    },
+    {
+      "name": "fp/activities.start",
+      "summary": "Start an activity in a session.",
+      "params": [
+        {
+          "name": "params",
+          "required": true,
+          "schema": {
+            "$ref": "#/components/schemas/ActivityStartParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "./fp-core.schema.json#/$defs/Activity"
+        }
+      }
+    },
+    {
+      "name": "fp/activities.update",
+      "summary": "Update activity state or metadata.",
+      "params": [
+        {
+          "name": "params",
+          "required": true,
+          "schema": {
+            "$ref": "#/components/schemas/ActivityUpdateParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "./fp-core.schema.json#/$defs/Activity"
+        }
+      }
+    },
+    {
+      "name": "fp/activities.get",
+      "summary": "Get activity by ID.",
+      "params": [
+        {
+          "name": "params",
+          "required": true,
+          "schema": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "activityId": {
+                "$ref": "./fp-core.schema.json#/$defs/Identifier"
+              }
+            },
+            "required": [
+              "activityId"
+            ]
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "./fp-core.schema.json#/$defs/Activity"
+        }
+      }
+    },
+    {
+      "name": "fp/activities.cancel",
+      "summary": "Cancel activity.",
+      "params": [
+        {
+          "name": "params",
+          "required": true,
+          "schema": {
+            "$ref": "#/components/schemas/ActivityCancelParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "./fp-core.schema.json#/$defs/Activity"
+        }
+      }
+    },
+    {
+      "name": "fp/activities.result",
+      "summary": "Get activity result payload.",
+      "params": [
+        {
+          "name": "params",
+          "required": true,
+          "schema": {
+            "$ref": "#/components/schemas/ActivityResultParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/ActivityResult"
+        }
+      }
+    },
+    {
+      "name": "fp/activities.list",
+      "summary": "List activities by filters.",
+      "params": [
+        {
+          "name": "params",
+          "required": true,
+          "schema": {
+            "$ref": "#/components/schemas/ActivityListParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/ActivityListResult"
+        }
+      }
+    },
+    {
+      "name": "fp/events.stream",
+      "summary": "Open a stream over session/activity event updates.",
+      "params": [
+        {
+          "name": "params",
+          "required": true,
+          "schema": {
+            "$ref": "#/components/schemas/EventStreamParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/EventStreamHandle"
+        }
+      }
+    },
+    {
+      "name": "fp/events.resubscribe",
+      "summary": "Resume an existing stream from last acknowledged event.",
+      "params": [
+        {
+          "name": "params",
+          "required": true,
+          "schema": {
+            "$ref": "#/components/schemas/EventResubscribeParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/EventStreamHandle"
+        }
+      }
+    },
+    {
+      "name": "fp/events.ack",
+      "summary": "Acknowledge event delivery positions.",
+      "params": [
+        {
+          "name": "params",
+          "required": true,
+          "schema": {
+            "$ref": "#/components/schemas/EventAckParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/EmptyResult"
+        }
+      }
+    },
+    {
+      "name": "fp/events.pushConfig.set",
+      "summary": "Set push notification configuration.",
+      "params": [
+        {
+          "name": "params",
+          "required": true,
+          "schema": {
+            "$ref": "#/components/schemas/PushConfigSetParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/PushConfig"
+        }
+      }
+    },
+    {
+      "name": "fp/events.pushConfig.get",
+      "summary": "Get push notification configuration.",
+      "params": [
+        {
+          "name": "params",
+          "required": true,
+          "schema": {
+            "$ref": "#/components/schemas/PushConfigGetParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/PushConfig"
+        }
+      }
+    },
+    {
+      "name": "fp/events.pushConfig.list",
+      "summary": "List push notification configurations by scope.",
+      "params": [
+        {
+          "name": "params",
+          "required": true,
+          "schema": {
+            "$ref": "#/components/schemas/PushConfigListParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/PushConfigListResult"
+        }
+      }
+    },
+    {
+      "name": "fp/events.pushConfig.delete",
+      "summary": "Delete push notification configuration.",
+      "params": [
+        {
+          "name": "params",
+          "required": true,
+          "schema": {
+            "$ref": "#/components/schemas/PushConfigDeleteParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/EmptyResult"
+        }
+      }
+    }
+  ],
+  "components": {
+    "schemas": {
+      "EmptyResult": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "InitializeParams": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "supportedVersions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1
+          },
+          "entityCardRef": {
+            "type": "string"
+          },
+          "entity": {
+            "$ref": "./fp-core.schema.json#/$defs/Entity"
+          },
+          "capabilities": {
+            "type": "object"
+          },
+          "supportedProfiles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "supportedExtensions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "authSchemes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "supportedVersions",
+          "capabilities"
+        ],
+        "anyOf": [
+          {
+            "required": [
+              "entityCardRef"
+            ]
+          },
+          {
+            "required": [
+              "entity"
+            ]
+          }
+        ]
+      },
+      "InitializeResult": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "negotiatedVersion": {
+            "type": "string"
+          },
+          "serverEntityRef": {
+            "type": "string"
+          },
+          "capabilities": {
+            "type": "object"
+          },
+          "supportedProfiles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "supportedExtensions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "authSchemes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "negotiatedVersion",
+          "capabilities"
+        ]
+      },
+      "EntitySearchParams": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "query": {
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "./fp-core.schema.json#/$defs/EntityKind"
+          },
+          "cursor": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          }
+        },
+        "required": [
+          "query"
+        ]
+      },
+      "EntitySearchResult": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "./fp-core.schema.json#/$defs/Entity"
+            }
+          },
+          "nextCursor": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "RoleUpdateParams": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "organizationId": {
+            "$ref": "./fp-core.schema.json#/$defs/Identifier"
+          },
+          "memberEntityId": {
+            "$ref": "./fp-core.schema.json#/$defs/Identifier"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1
+          }
+        },
+        "required": [
+          "organizationId",
+          "memberEntityId",
+          "roles"
+        ]
+      },
+      "SessionCreateParams": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "participants": {
+            "type": "array",
+            "items": {
+              "$ref": "./fp-core.schema.json#/$defs/Identifier"
+            },
+            "minItems": 2
+          },
+          "roles": {
+            "$ref": "./fp-core.schema.json#/$defs/RoleMap"
+          },
+          "policyRef": {
+            "$ref": "./fp-core.schema.json#/$defs/Identifier"
+          },
+          "budget": {
+            "$ref": "./fp-core.schema.json#/$defs/SessionBudget"
+          }
+        },
+        "required": [
+          "participants",
+          "roles"
+        ]
+      },
+      "SessionJoinParams": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sessionId": {
+            "$ref": "./fp-core.schema.json#/$defs/Identifier"
+          },
+          "entityId": {
+            "$ref": "./fp-core.schema.json#/$defs/Identifier"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "sessionId",
+          "entityId"
+        ]
+      },
+      "SessionUpdateParams": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sessionId": {
+            "$ref": "./fp-core.schema.json#/$defs/Identifier"
+          },
+          "policyRef": {
+            "$ref": "./fp-core.schema.json#/$defs/Identifier"
+          },
+          "budget": {
+            "$ref": "./fp-core.schema.json#/$defs/SessionBudget"
+          },
+          "state": {
+            "$ref": "./fp-core.schema.json#/$defs/SessionState"
+          },
+          "rolesPatch": {
+            "$ref": "./fp-core.schema.json#/$defs/RoleMap"
+          }
+        },
+        "required": [
+          "sessionId"
+        ]
+      },
+      "SessionLeaveParams": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sessionId": {
+            "$ref": "./fp-core.schema.json#/$defs/Identifier"
+          },
+          "entityId": {
+            "$ref": "./fp-core.schema.json#/$defs/Identifier"
+          }
+        },
+        "required": [
+          "sessionId",
+          "entityId"
+        ]
+      },
+      "SessionCloseParams": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sessionId": {
+            "$ref": "./fp-core.schema.json#/$defs/Identifier"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "sessionId"
+        ]
+      },
+      "ActivityStartParams": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sessionId": {
+            "$ref": "./fp-core.schema.json#/$defs/Identifier"
+          },
+          "ownerEntityId": {
+            "$ref": "./fp-core.schema.json#/$defs/Identifier"
+          },
+          "initiatorEntityId": {
+            "$ref": "./fp-core.schema.json#/$defs/Identifier"
+          },
+          "input": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "sessionId"
+        ]
+      },
+      "ActivityUpdateParams": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "activityId": {
+            "$ref": "./fp-core.schema.json#/$defs/Identifier"
+          },
+          "state": {
+            "$ref": "./fp-core.schema.json#/$defs/ActivityState"
+          },
+          "statusMessage": {
+            "type": "string"
+          },
+          "patch": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "activityId"
+        ]
+      },
+      "ActivityCancelParams": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "activityId": {
+            "$ref": "./fp-core.schema.json#/$defs/Identifier"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "activityId"
+        ]
+      },
+      "ActivityResultParams": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "activityId": {
+            "$ref": "./fp-core.schema.json#/$defs/Identifier"
+          },
+          "expectedType": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "activityId"
+        ]
+      },
+      "ActivityResult": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "activity": {
+            "$ref": "./fp-core.schema.json#/$defs/Activity"
+          },
+          "result": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "activity"
+        ]
+      },
+      "ActivityListParams": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sessionId": {
+            "$ref": "./fp-core.schema.json#/$defs/Identifier"
+          },
+          "state": {
+            "$ref": "./fp-core.schema.json#/$defs/ActivityState"
+          },
+          "ownerEntityId": {
+            "$ref": "./fp-core.schema.json#/$defs/Identifier"
+          },
+          "cursor": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          }
+        }
+      },
+      "ActivityListResult": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "./fp-core.schema.json#/$defs/Activity"
+            }
+          },
+          "nextCursor": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "EventStreamParams": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sessionId": {
+            "$ref": "./fp-core.schema.json#/$defs/Identifier"
+          },
+          "activityId": {
+            "$ref": "./fp-core.schema.json#/$defs/Identifier"
+          },
+          "fromEventId": {
+            "$ref": "./fp-core.schema.json#/$defs/Identifier"
+          },
+          "batchSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10000
+          },
+          "filters": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "sessionId"
+        ]
+      },
+      "EventStreamHandle": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "streamId": {
+            "$ref": "./fp-core.schema.json#/$defs/Identifier"
+          },
+          "transport": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "mode": {
+                "type": "string",
+                "enum": [
+                  "sse",
+                  "websocket",
+                  "poll"
+                ]
+              },
+              "endpoint": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode"
+            ]
+          }
+        },
+        "required": [
+          "streamId",
+          "transport"
+        ]
+      },
+      "EventResubscribeParams": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "streamId": {
+            "$ref": "./fp-core.schema.json#/$defs/Identifier"
+          },
+          "lastEventId": {
+            "$ref": "./fp-core.schema.json#/$defs/Identifier"
+          }
+        },
+        "required": [
+          "streamId",
+          "lastEventId"
+        ]
+      },
+      "EventAckParams": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "streamId": {
+            "$ref": "./fp-core.schema.json#/$defs/Identifier"
+          },
+          "eventIds": {
+            "type": "array",
+            "items": {
+              "$ref": "./fp-core.schema.json#/$defs/Identifier"
+            },
+            "minItems": 1
+          }
+        },
+        "required": [
+          "streamId",
+          "eventIds"
+        ]
+      },
+      "PushConfig": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "pushConfigId": {
+            "$ref": "./fp-core.schema.json#/$defs/Identifier"
+          },
+          "scope": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "sessionId": {
+                "$ref": "./fp-core.schema.json#/$defs/Identifier"
+              },
+              "activityId": {
+                "$ref": "./fp-core.schema.json#/$defs/Identifier"
+              }
+            }
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "auth": {
+            "type": "object"
+          },
+          "eventTypes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "pushConfigId",
+          "scope",
+          "url"
+        ]
+      },
+      "PushConfigSetParams": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "config": {
+            "$ref": "#/components/schemas/PushConfig"
+          }
+        },
+        "required": [
+          "config"
+        ]
+      },
+      "PushConfigGetParams": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "pushConfigId": {
+            "$ref": "./fp-core.schema.json#/$defs/Identifier"
+          }
+        },
+        "required": [
+          "pushConfigId"
+        ]
+      },
+      "PushConfigListParams": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sessionId": {
+            "$ref": "./fp-core.schema.json#/$defs/Identifier"
+          },
+          "activityId": {
+            "$ref": "./fp-core.schema.json#/$defs/Identifier"
+          }
+        }
+      },
+      "PushConfigListResult": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PushConfig"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "PushConfigDeleteParams": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "pushConfigId": {
+            "$ref": "./fp-core.schema.json#/$defs/Identifier"
+          }
+        },
+        "required": [
+          "pushConfigId"
+        ]
+      }
+    },
+    "errors": {
+      "VersionUnsupported": {
+        "code": -32010,
+        "message": "FP_VERSION_UNSUPPORTED"
+      },
+      "AuthRequired": {
+        "code": -32011,
+        "message": "FP_AUTH_REQUIRED"
+      },
+      "AuthzDenied": {
+        "code": -32012,
+        "message": "FP_AUTHZ_DENIED"
+      },
+      "PolicyDenied": {
+        "code": -32013,
+        "message": "FP_POLICY_DENIED"
+      },
+      "InvalidStateTransition": {
+        "code": -32014,
+        "message": "FP_INVALID_STATE_TRANSITION"
+      },
+      "NotFound": {
+        "code": -32015,
+        "message": "FP_NOT_FOUND"
+      },
+      "RateLimited": {
+        "code": -32016,
+        "message": "FP_RATE_LIMITED"
+      },
+      "Backpressure": {
+        "code": -32017,
+        "message": "FP_BACKPRESSURE"
+      },
+      "ExtensionRequired": {
+        "code": -32018,
+        "message": "FP_EXTENSION_REQUIRED"
+      },
+      "InternalError": {
+        "code": -32603,
+        "message": "FP_INTERNAL_ERROR"
+      }
+    }
+  }
+}

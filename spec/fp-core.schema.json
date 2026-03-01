@@ -1,0 +1,846 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://foundation-protocol.org/spec/v0.1/fp-core.schema.json",
+  "title": "Foundation Protocol Core Schema v0.1",
+  "description": "Core JSON Schema definitions for Foundation Protocol (FP) v0.1.",
+  "type": "object",
+  "additionalProperties": true,
+  "$defs": {
+    "Identifier": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9:_./#-]+$"
+    },
+    "Uri": {
+      "type": "string",
+      "format": "uri"
+    },
+    "Timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "EntityKind": {
+      "type": "string",
+      "enum": [
+        "agent",
+        "tool",
+        "resource",
+        "human",
+        "organization",
+        "institution",
+        "service",
+        "ui"
+      ]
+    },
+    "SessionState": {
+      "type": "string",
+      "enum": [
+        "created",
+        "active",
+        "paused",
+        "closing",
+        "closed",
+        "failed"
+      ]
+    },
+    "ActivityState": {
+      "type": "string",
+      "enum": [
+        "submitted",
+        "working",
+        "input_required",
+        "auth_required",
+        "completed",
+        "failed",
+        "canceled",
+        "rejected"
+      ]
+    },
+    "FpFamily": {
+      "type": "string",
+      "enum": [
+        "FP.MSG",
+        "FP.SHARE",
+        "FP.INVOKE",
+        "FP.EVENT",
+        "FP.RECEIPT",
+        "FP.SETTLE",
+        "FP.NEGOTIATE",
+        "FP.DISPUTE"
+      ]
+    },
+    "Identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "method": {
+          "type": "string",
+          "minLength": 1
+        },
+        "issuer": {
+          "type": "string"
+        },
+        "keyRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Identifier"
+          },
+          "minItems": 1
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "method",
+        "keyRefs",
+        "version"
+      ]
+    },
+    "CapabilitySummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "purpose": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "riskTags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "schemaHashes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^(sha256|sha384|sha512):[A-Fa-f0-9]+$"
+          }
+        },
+        "pricePolicyHints": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "purpose"
+      ]
+    },
+    "PrivacyControl": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "owner": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "defaultVisibility": {
+          "type": "string",
+          "enum": [
+            "public",
+            "restricted",
+            "private"
+          ]
+        },
+        "delegationPolicyRef": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "owner",
+        "defaultVisibility"
+      ]
+    },
+    "Entity": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "entityId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "kind": {
+          "$ref": "#/$defs/EntityKind"
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "identity": {
+          "$ref": "#/$defs/Identity"
+        },
+        "capabilitySummary": {
+          "$ref": "#/$defs/CapabilitySummary"
+        },
+        "capabilityRefs": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "$ref": "#/$defs/Uri"
+              },
+              {
+                "$ref": "#/$defs/Identifier"
+              }
+            ]
+          }
+        },
+        "privacy": {
+          "$ref": "#/$defs/PrivacyControl"
+        },
+        "trustRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Identifier"
+          }
+        }
+      },
+      "required": [
+        "entityId",
+        "kind",
+        "identity",
+        "capabilitySummary",
+        "privacy"
+      ]
+    },
+    "OrganizationGovernance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "policyRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Identifier"
+          },
+          "minItems": 1
+        },
+        "roleCatalog": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        }
+      },
+      "required": [
+        "policyRefs",
+        "roleCatalog"
+      ]
+    },
+    "Organization": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/Entity"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "organization"
+            },
+            "governance": {
+              "$ref": "#/$defs/OrganizationGovernance"
+            }
+          },
+          "required": [
+            "governance"
+          ]
+        }
+      ]
+    },
+    "DelegationSpendLimit": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "currency": {
+          "type": "string",
+          "minLength": 1
+        },
+        "amount": {
+          "type": "number",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "currency",
+        "amount"
+      ]
+    },
+    "DelegationConstraints": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "spendLimit": {
+          "$ref": "#/$defs/DelegationSpendLimit"
+        },
+        "tokenLimit": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "allowedFamilies": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/FpFamily"
+          }
+        }
+      }
+    },
+    "Delegation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "scope": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "constraints": {
+          "$ref": "#/$defs/DelegationConstraints"
+        },
+        "expiresAt": {
+          "$ref": "#/$defs/Timestamp"
+        }
+      },
+      "required": [
+        "scope",
+        "expiresAt"
+      ]
+    },
+    "MembershipStatus": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "active",
+        "suspended",
+        "revoked"
+      ]
+    },
+    "Membership": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "membershipId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "organizationId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "memberEntityId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "roles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "delegations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Delegation"
+          }
+        },
+        "status": {
+          "$ref": "#/$defs/MembershipStatus"
+        }
+      },
+      "required": [
+        "membershipId",
+        "organizationId",
+        "memberEntityId",
+        "roles",
+        "status"
+      ]
+    },
+    "SessionBudget": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "spendLimit": {
+          "$ref": "#/$defs/DelegationSpendLimit"
+        },
+        "tokenLimit": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "RoleMap": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/$defs/Identifier"
+      },
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "minItems": 1
+      }
+    },
+    "Session": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "sessionId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "participants": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Identifier"
+          },
+          "minItems": 2
+        },
+        "roles": {
+          "$ref": "#/$defs/RoleMap"
+        },
+        "policyRef": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "budget": {
+          "$ref": "#/$defs/SessionBudget"
+        },
+        "state": {
+          "$ref": "#/$defs/SessionState"
+        }
+      },
+      "required": [
+        "sessionId",
+        "participants",
+        "roles",
+        "state"
+      ]
+    },
+    "Activity": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "activityId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "sessionId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "initiatorEntityId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "ownerEntityId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "state": {
+          "$ref": "#/$defs/ActivityState"
+        },
+        "statusMessage": {
+          "type": "string"
+        },
+        "createdAt": {
+          "$ref": "#/$defs/Timestamp"
+        },
+        "updatedAt": {
+          "$ref": "#/$defs/Timestamp"
+        },
+        "ttlMs": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "activityId",
+        "sessionId",
+        "state",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Event": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "eventId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "eventType": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sessionId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "activityId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "traceId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "causationId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "producerEntityId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "occurredAt": {
+          "$ref": "#/$defs/Timestamp"
+        },
+        "payload": {
+          "type": "object"
+        },
+        "policyRef": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "evidenceRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Identifier"
+          }
+        }
+      },
+      "required": [
+        "eventId",
+        "eventType",
+        "sessionId",
+        "traceId",
+        "producerEntityId",
+        "occurredAt",
+        "payload"
+      ]
+    },
+    "Envelope": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "fpVersion": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+$"
+        },
+        "messageId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "family": {
+          "$ref": "#/$defs/FpFamily"
+        },
+        "traceId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "spanId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "causationId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "from": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "to": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "sessionId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "activityId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "sentAt": {
+          "$ref": "#/$defs/Timestamp"
+        },
+        "ttlMs": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "extensions": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "$ref": "#/$defs/Uri"
+              },
+              {
+                "$ref": "#/$defs/Identifier"
+              }
+            ]
+          }
+        },
+        "policyRef": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "payload": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "fpVersion",
+        "messageId",
+        "family",
+        "traceId",
+        "from",
+        "to",
+        "sentAt",
+        "payload"
+      ]
+    },
+    "MeterRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "meterId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "subject": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "unit": {
+          "type": "string",
+          "enum": [
+            "token",
+            "ms",
+            "byte",
+            "call",
+            "custom"
+          ]
+        },
+        "quantity": {
+          "type": "number",
+          "minimum": 0
+        },
+        "meteredAt": {
+          "$ref": "#/$defs/Timestamp"
+        },
+        "meteringPolicyRef": {
+          "$ref": "#/$defs/Identifier"
+        }
+      },
+      "required": [
+        "meterId",
+        "subject",
+        "unit",
+        "quantity",
+        "meteredAt"
+      ]
+    },
+    "Receipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "receiptId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "activityId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "meterSummary": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/MeterRecord"
+          },
+          "minItems": 1
+        },
+        "providerEntityId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "proof": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "signature",
+                "hash"
+              ]
+            },
+            "value": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "value"
+          ]
+        },
+        "issuedAt": {
+          "$ref": "#/$defs/Timestamp"
+        }
+      },
+      "required": [
+        "receiptId",
+        "activityId",
+        "meterSummary",
+        "providerEntityId",
+        "proof",
+        "issuedAt"
+      ]
+    },
+    "SettlementStatus": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "confirmed",
+        "failed",
+        "reversed"
+      ]
+    },
+    "Settlement": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "settlementId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "receiptRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Identifier"
+          },
+          "minItems": 1
+        },
+        "reference": {
+          "type": "string"
+        },
+        "amount": {
+          "type": "number",
+          "minimum": 0
+        },
+        "currency": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/SettlementStatus"
+        },
+        "updatedAt": {
+          "$ref": "#/$defs/Timestamp"
+        }
+      },
+      "required": [
+        "settlementId",
+        "receiptRefs",
+        "reference",
+        "status",
+        "updatedAt"
+      ]
+    },
+    "Dispute": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "disputeId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "targetRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Identifier"
+          },
+          "minItems": 1
+        },
+        "reasonCode": {
+          "type": "string"
+        },
+        "claimantEntityId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "evidenceRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Identifier"
+          }
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "opened",
+            "under_review",
+            "resolved",
+            "rejected"
+          ]
+        },
+        "updatedAt": {
+          "$ref": "#/$defs/Timestamp"
+        }
+      },
+      "required": [
+        "disputeId",
+        "targetRefs",
+        "reasonCode",
+        "claimantEntityId",
+        "state",
+        "updatedAt"
+      ]
+    },
+    "ProvenanceRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "recordId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "subjectRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Identifier"
+          },
+          "minItems": 1
+        },
+        "inputDigestRefs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "policyRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Identifier"
+          }
+        },
+        "outcome": {
+          "type": "string"
+        },
+        "signerRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Identifier"
+          }
+        },
+        "timestamp": {
+          "$ref": "#/$defs/Timestamp"
+        }
+      },
+      "required": [
+        "recordId",
+        "subjectRefs",
+        "outcome",
+        "timestamp"
+      ]
+    },
+    "Error": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "type": "string",
+          "pattern": "^FP_[A-Z0-9_]+$"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "object"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "code",
+        "message",
+        "retryable"
+      ]
+    }
+  }
+}

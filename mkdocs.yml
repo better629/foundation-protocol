@@ -1,0 +1,39 @@
+site_name: Foundation Protocol (FP) Python SDK
+site_description: Foundation Protocol reference runtime and SDK documentation
+repo_name: foundation-protocol
+docs_dir: docs/site
+site_dir: site
+theme:
+  name: material
+  language: en
+  features:
+    - navigation.instant
+    - navigation.sections
+    - content.code.copy
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths:
+            - src
+          options:
+            show_source: false
+            heading_level: 2
+            members_order: source
+            separate_signature: true
+            show_signature_annotations: true
+markdown_extensions:
+  - admonition
+  - pymdownx.superfences
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - toc:
+      permalink: true
+strict: true
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Architecture: architecture.md
+  - Operations: operations.md
+  - API Reference: api.md

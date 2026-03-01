@@ -1,0 +1,20 @@
+# macOS
+.DS_Store
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Test/cache tools
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Build/distribution
+build/
+dist/
+*.egg-info/
+
+# Documentation build output
+site/
