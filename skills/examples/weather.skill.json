@@ -1,0 +1,44 @@
+{
+  "skill_spec_version": "0.1",
+  "fp_version": "0.1.0",
+  "entity": {
+    "entity_id": "fp:agent:weather-bot",
+    "kind": "agent",
+    "display_name": "Weather Bot",
+    "capability_purpose": [
+      "weather.lookup"
+    ],
+    "metadata": {
+      "team": "example"
+    }
+  },
+  "connection": {
+    "mode": "inproc",
+    "timeout_seconds": 10.0,
+    "keep_alive": true
+  },
+  "auth": {
+    "mode": "none"
+  },
+  "defaults": {
+    "auto_session": true,
+    "policy_ref": "policy:weather-default",
+    "token_limit": 4096,
+    "result_compaction_bytes": 4096,
+    "default_roles": {
+      "fp:agent:weather-bot": [
+        "provider"
+      ],
+      "fp:system:skill-orchestrator": [
+        "coordinator"
+      ]
+    }
+  },
+  "operations": [
+    {
+      "name": "weather.lookup",
+      "handler": "skills.examples.weather_handlers:lookup_weather",
+      "description": "Lookup weather by city"
+    }
+  ]
+}

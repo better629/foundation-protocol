@@ -1,0 +1,1 @@
+"""Python skill SDK namespace."""

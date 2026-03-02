@@ -108,6 +108,29 @@ Included scenarios:
 - `examples/scenarios/transport_jsonrpc.py`
 - `examples/scenarios/federated_discovery_trade.py`
 
+## Skills layer (new)
+
+This repo now includes an isolated skills layer at `skills/` for ultra-low-friction FP onboarding.
+
+What it includes:
+
+- `skills/spec/manifest.schema.json`: `FP Skill Manifest v0.1` schema
+- `skills/python/fp_skill/`: Python Skill SDK (`manifest`, `runtime`, `decorators`, `cli`)
+- `skills/examples/weather.skill.json`: runnable manifest example
+
+Validate a skill manifest:
+
+```bash
+PYTHONPATH=src:skills/python python3 -m fp_skill validate skills/examples/weather.skill.json
+```
+
+Run local smoke bootstrap + invoke:
+
+```bash
+PYTHONPATH=src:skills/python python3 -m fp_skill smoke skills/examples/weather.skill.json \
+  --operation weather.lookup --payload '{"city":"Paris"}'
+```
+
 ## Federated publish/discover/connect
 
 FP now supports entity-owned runtime publication and network discovery:

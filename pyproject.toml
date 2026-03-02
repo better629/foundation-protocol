@@ -46,4 +46,4 @@ where = ["src"]
 minversion = "8.0"
 addopts = "-q -ra"
 testpaths = ["tests"]
-pythonpath = ["src"]
+pythonpath = ["src", "skills/python"]
