@@ -153,6 +153,13 @@ PYTHONPATH=src:skills/python python3 -m fp_skill smoke skills/examples/weather.s
   --idempotency-key idem-weather-paris-001
 ```
 
+Start and publish runtime directly from skill manifest:
+
+```bash
+PYTHONPATH=src:skills/python python3 -m fp_skill serve skills/examples/weather.skill.json \
+  --host 127.0.0.1 --port 0 --directory inmemory --announce-file .tmp/fp-skill-serve.json
+```
+
 ### Agent-autonomous FP onboarding
 
 The skill design is machine-readable first (`manifest.schema.json` + JSON manifest), so capable agents can self-bootstrap into FP with minimal human operations.

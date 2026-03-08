@@ -43,6 +43,28 @@ def test_skill_md_is_portable_and_repo_agnostic() -> None:
     assert "skills/examples/" not in skill_md
 
 
+def test_skill_md_frontmatter_matches_anthropic_skill_convention() -> None:
+    text = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
+    assert text.startswith("---\n")
+    head_end = text.find("\n---\n", 4)
+    assert head_end > 4
+    frontmatter = text[4:head_end].splitlines()
+    keys: list[str] = []
+    for line in frontmatter:
+        line = line.strip()
+        if not line:
+            continue
+        assert ":" in line, f"invalid frontmatter line: {line}"
+        keys.append(line.split(":", 1)[0].strip())
+    assert sorted(keys) == ["description", "name"]
+    name_line = [item for item in frontmatter if item.strip().startswith("name:")][0]
+    description_line = [item for item in frontmatter if item.strip().startswith("description:")][0]
+    name = name_line.split(":", 1)[1].strip()
+    description = description_line.split(":", 1)[1].strip()
+    assert name == "fp-onboarding"
+    assert description.lower().startswith("use when")
+
+
 def test_bundle_scripts_are_runnable_help() -> None:
     scripts = [VALIDATE_SCRIPT, RENDER_SCRIPT]
     for script in scripts:

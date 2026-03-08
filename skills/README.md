@@ -67,6 +67,21 @@ PYTHONPATH=src:skills/python python3 -m fp_skill smoke skills/examples/weather.s
   --idempotency-key idem-weather-paris-001
 ```
 
+Serve and publish runtime from manifest:
+
+```bash
+PYTHONPATH=src:skills/python python3 -m fp_skill serve skills/examples/weather.skill.json \
+  --host 127.0.0.1 --port 0 --directory inmemory --announce-file .tmp/fp-skill-serve.json
+```
+
+`serve` behavior:
+
+- auto-loads declared operations from manifest
+- starts HTTP JSON-RPC FP server + well-known server card endpoint
+- runs remote ping self-check
+- optionally publishes card into in-memory directory
+- writes startup metadata into `--announce-file` for automation/agents
+
 ## Runtime behavior notes
 
 - Skill runtime auto-registers the manifest entity and orchestrator entity.

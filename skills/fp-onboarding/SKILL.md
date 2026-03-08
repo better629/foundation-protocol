@@ -63,7 +63,14 @@ PYTHONPATH=src:skills/python python3 -m fp_skill smoke weather.skill.json \
   --operation <operation.name> --payload '{"key":"value"}'
 ```
 
-6. Production handoff
+6. Start/publish runtime directly from manifest (when needed)
+
+```bash
+PYTHONPATH=src:skills/python python3 -m fp_skill serve weather.skill.json \
+  --host 127.0.0.1 --port 0 --directory inmemory --announce-file .tmp/fp-skill-serve.json
+```
+
+7. Production handoff
 - if retries are possible, pass explicit `idempotency_key`
 - use `http_jsonrpc` mode + bearer/JWT strategy for remote runtime
 - keep policy/budget defaults explicit in manifest
